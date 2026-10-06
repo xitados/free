@@ -26,11 +26,157 @@ local espLineEnabled = false
 local espLineColor = Color3.fromRGB(255, 0, 0)
 local espNameEnabled = false
 local espNameColor = Color3.fromRGB(255, 0, 0)
-local KillAllEnabled = false
 local hitboxEnabled = false
 local hitboxInvisible = false
 local hitboxSize = 5
 local hitboxColor = Color3.fromRGB(255, 0, 0)
+local equipGunEnabled = false
+local NoTextureEnabled = false
+local NoShadowsEnabled = false
+local LightbrightEnabled = false
+local SelectedAnim = nil
+local SelectedAnimName = nil
+local camlockEnabled = false
+local camlockGunOnly = false
+local camlockKnifeOnly = false
+
+local CONFIG_FILE = "ClanxitadosHub_Config.json"
+local _configReady = false
+
+local function colorToTable(c)
+    if typeof(c) ~= "Color3" then return {255, 0, 0} end
+    return { math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5) }
+end
+
+local function tableToColor(t)
+    if type(t) ~= "table" then return Color3.fromRGB(255, 0, 0) end
+    return Color3.fromRGB(tonumber(t[1]) or 255, tonumber(t[2]) or 0, tonumber(t[3]) or 0)
+end
+
+local function SaveConfig()
+    if not _configReady then return end
+    if not writefile then return end
+    local data = {
+        autoShootEnabled = autoShootEnabled,
+        autoShootAgresivoEnabled = autoShootAgresivoEnabled,
+        autoShootTargetPart = autoShootTargetPart,
+        equipGunEnabled = equipGunEnabled,
+        silentAimManualEnabled = silentAimManualEnabled,
+        silentAimFovEnabled = silentAimFovEnabled,
+        silentAimTargetPart = silentAimTargetPart,
+        fovRadius = fovRadius,
+        hitboxEnabled = hitboxEnabled,
+        hitboxInvisible = hitboxInvisible,
+        hitboxSize = hitboxSize,
+        hitboxColor = colorToTable(hitboxColor),
+        espEnabled = espEnabled,
+        espColor = colorToTable(espColor),
+        espLineEnabled = espLineEnabled,
+        espLineColor = colorToTable(espLineColor),
+        espNameEnabled = espNameEnabled,
+        espNameColor = colorToTable(espNameColor),
+        triggerEnabled = getgenv().TriggerEnabled == true,
+        autoEventFarm = getgenv().AutoEventFarm == true,
+        noTexture = NoTextureEnabled == true,
+        noShadows = NoShadowsEnabled == true,
+        lightbright = LightbrightEnabled == true,
+        invisibleMenu = (invisibleButton and invisibleButton.Visible) == true,
+        selectedAnimName = SelectedAnimName,
+        camlockEnabled = camlockEnabled == true,
+        camlockGunOnly = camlockGunOnly == true,
+        camlockKnifeOnly = camlockKnifeOnly == true,
+    }
+    pcall(function()
+        writefile(CONFIG_FILE, HttpService:JSONEncode(data))
+    end)
+end
+
+local function LoadConfigData()
+    if not (isfile and readfile) then return nil end
+    local ok, raw = pcall(function()
+        if isfile(CONFIG_FILE) then return readfile(CONFIG_FILE) end
+        return nil
+    end)
+    if not ok or not raw or raw == "" then return nil end
+    local ok2, data = pcall(function() return HttpService:JSONDecode(raw) end)
+    if ok2 and type(data) == "table" then return data end
+    return nil
+end
+
+local function ApplyConfig(data)
+    if not data then return end
+
+    if data.autoShootEnabled ~= nil then autoShootEnabled = data.autoShootEnabled == true end
+    if data.autoShootAgresivoEnabled ~= nil then autoShootAgresivoEnabled = data.autoShootAgresivoEnabled == true end
+    if data.autoShootTargetPart then autoShootTargetPart = tostring(data.autoShootTargetPart) end
+    if data.equipGunEnabled ~= nil then equipGunEnabled = data.equipGunEnabled == true end
+    if data.silentAimManualEnabled ~= nil then silentAimManualEnabled = data.silentAimManualEnabled == true end
+    if data.silentAimFovEnabled ~= nil then silentAimFovEnabled = data.silentAimFovEnabled == true end
+    if data.silentAimTargetPart then silentAimTargetPart = tostring(data.silentAimTargetPart) end
+    if data.fovRadius then fovRadius = tonumber(data.fovRadius) or fovRadius end
+    if data.hitboxEnabled ~= nil then hitboxEnabled = data.hitboxEnabled == true end
+    if data.hitboxInvisible ~= nil then hitboxInvisible = data.hitboxInvisible == true end
+    if data.hitboxSize then hitboxSize = tonumber(data.hitboxSize) or hitboxSize end
+    if data.hitboxColor then hitboxColor = tableToColor(data.hitboxColor) end
+    if data.espEnabled ~= nil then espEnabled = data.espEnabled == true end
+    if data.espColor then espColor = tableToColor(data.espColor) end
+    if data.espLineEnabled ~= nil then espLineEnabled = data.espLineEnabled == true end
+    if data.espLineColor then espLineColor = tableToColor(data.espLineColor) end
+    if data.espNameEnabled ~= nil then espNameEnabled = data.espNameEnabled == true end
+    if data.espNameColor then espNameColor = tableToColor(data.espNameColor) end
+    if data.triggerEnabled ~= nil then getgenv().TriggerEnabled = data.triggerEnabled == true end
+    if data.autoEventFarm ~= nil then getgenv().AutoEventFarm = data.autoEventFarm == true end
+    if data.invisibleMenu ~= nil then invisibleEnabled = data.invisibleMenu == true end
+
+    -- Sync UI elements if they exist
+    local function safeSet(el, val)
+        if el then pcall(function() el:Set(val) end) end
+    end
+
+    safeSet(UIElements.TogAutoShoot, autoShootEnabled)
+    safeSet(UIElements.TogAutoShootAgr, autoShootAgresivoEnabled)
+    safeSet(UIElements.DropAutoShootPart, autoShootTargetPart)
+    safeSet(UIElements.TogEquipGun, equipGunEnabled)
+    safeSet(UIElements.TogTriggerbot, getgenv().TriggerEnabled == true)
+    safeSet(UIElements.TogSilentAimManual, silentAimManualEnabled)
+    safeSet(UIElements.DropSilentAimPart, silentAimTargetPart)
+    safeSet(UIElements.TogSilentAimFOV, silentAimFovEnabled)
+    safeSet(UIElements.SliFOVSize, fovRadius)
+    safeSet(UIElements.TogHitbox, hitboxEnabled)
+    safeSet(UIElements.TogHitboxInvisible, hitboxInvisible)
+    safeSet(UIElements.SliHitboxSize, hitboxSize)
+    safeSet(UIElements.TogEsp, espEnabled)
+    safeSet(UIElements.TogEspLine, espLineEnabled)
+    safeSet(UIElements.TogEspName, espNameEnabled)
+    safeSet(UIElements.TogInvisible, invisibleEnabled)
+
+    if invisibleEnabled then
+        invisibleButton.Visible = true
+        updateInvisibleButton()
+    end
+
+    -- Restaurar animación seleccionada
+    if data.selectedAnimName and AnimToggleElements and AnimToggleElements[data.selectedAnimName] then
+        pcall(function() AnimToggleElements[data.selectedAnimName]:Set(true) end)
+    end
+
+    if data.camlockEnabled ~= nil then camlockEnabled = data.camlockEnabled == true end
+    if data.camlockGunOnly ~= nil then camlockGunOnly = data.camlockGunOnly == true end
+    if data.camlockKnifeOnly ~= nil then camlockKnifeOnly = data.camlockKnifeOnly == true end
+    safeSet(UIElements.TogCamlock, camlockEnabled)
+    safeSet(UIElements.TogCamlockGunOnly, camlockGunOnly)
+    safeSet(UIElements.TogCamlockKnifeOnly, camlockKnifeOnly)
+
+    -- Performance (applied via their setter functions if available later)
+    if data.noTexture and setNoTexture then pcall(function() setNoTexture(true) end); safeSet(UIElements.TogNoTexture, true) end
+    if data.noShadows and setNoShadows then pcall(function() setNoShadows(true) end); safeSet(UIElements.TogNoShadows, true) end
+    if data.lightbright and setLightbright then pcall(function() setLightbright(true) end); safeSet(UIElements.TogLightbright, true) end
+
+    -- Auto Event Farm restart if needed
+    if getgenv().AutoEventFarm then
+        -- the toggle callback starts the loop; just ensure flag is set
+    end
+end
 
 local UIElements = {}
 local NotificationsEnabled = false
@@ -74,6 +220,141 @@ local function makeDraggable(guiObject, objectToMove, callback)
         if not moved and callback then callback() end
     end)
 end
+
+-- ========== INVISIBLE (lógica de invis.txt) ==========
+local invisibleEnabled = false
+local isInvisible = false
+local character, humanoid, rootPart
+local characterParts = {}
+local invisibleHeartbeatConnection = nil
+
+local invisibleGui = Instance.new("ScreenGui")
+invisibleGui.Name = "ClanxitadosInvisibleButton"
+invisibleGui.ResetOnSpawn = false
+invisibleGui.IgnoreGuiInset = true
+invisibleGui.DisplayOrder = 1000
+invisibleGui.Parent = player:WaitForChild("PlayerGui")
+
+local invisibleButton = Instance.new("TextButton")
+invisibleButton.Name = "InvisibleToggle"
+invisibleButton.Size = UDim2.fromOffset(58, 44)
+invisibleButton.Position = UDim2.new(0.5, -29, 0.16, 0)
+invisibleButton.BackgroundColor3 = Color3.fromRGB(48, 50, 54)
+invisibleButton.BackgroundTransparency = 0.35
+invisibleButton.Text = "D"
+invisibleButton.TextColor3 = Color3.fromRGB(245, 245, 245)
+invisibleButton.Font = Enum.Font.GothamBold
+invisibleButton.TextSize = 18
+invisibleButton.AutoButtonColor = false
+invisibleButton.Visible = false
+invisibleButton.Parent = invisibleGui
+
+local invisibleCorner = Instance.new("UICorner")
+invisibleCorner.CornerRadius = UDim.new(0, 10)
+invisibleCorner.Parent = invisibleButton
+
+local invisibleStroke = Instance.new("UIStroke")
+invisibleStroke.Color = Color3.fromRGB(170, 170, 170)
+invisibleStroke.Transparency = 0.45
+invisibleStroke.Thickness = 1
+invisibleStroke.Parent = invisibleButton
+
+local function updateCharacterReferences()
+    character = player.Character
+    if not character then return end
+    humanoid = character:FindFirstChildOfClass("Humanoid")
+    rootPart = character:FindFirstChild("HumanoidRootPart")
+    characterParts = {}
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                table.insert(characterParts, part)
+            end
+        end
+    end
+end
+
+local function applyTransparency(state)
+    for _, part in pairs(characterParts) do
+        if part and part.Parent then
+            pcall(function()
+                part.Transparency = state and 0.5 or 0
+            end)
+        end
+    end
+end
+
+local function updateInvisibleButton()
+    invisibleButton.Text = isInvisible and "A" or "D"
+    invisibleButton.BackgroundColor3 = isInvisible
+        and Color3.fromRGB(46, 160, 82)
+        or Color3.fromRGB(48, 50, 54)
+end
+
+local function startInvisibleHeartbeat()
+    if invisibleHeartbeatConnection then
+        invisibleHeartbeatConnection:Disconnect()
+        invisibleHeartbeatConnection = nil
+    end
+    invisibleHeartbeatConnection = RunService.Heartbeat:Connect(function()
+        if isInvisible and rootPart and humanoid and rootPart.Parent and humanoid.Parent then
+            local realCFrame = rootPart.CFrame
+            local oldOffset = humanoid.CameraOffset
+
+            local fakeCFrame = realCFrame * CFrame.new(0, 500, 0)
+            local offsetDifference = fakeCFrame:ToObjectSpace(CFrame.new(realCFrame.Position)).Position
+
+            rootPart.CFrame = fakeCFrame
+            humanoid.CameraOffset = offsetDifference
+
+            RunService.RenderStepped:Wait()
+
+            if rootPart and rootPart.Parent then
+                rootPart.CFrame = realCFrame
+            end
+            if humanoid and humanoid.Parent then
+                humanoid.CameraOffset = oldOffset
+            end
+        end
+    end)
+end
+
+local function stopInvisibleHeartbeat()
+    if invisibleHeartbeatConnection then
+        invisibleHeartbeatConnection:Disconnect()
+        invisibleHeartbeatConnection = nil
+    end
+end
+
+local function setLocalInvisible(enabled)
+    isInvisible = enabled == true
+    invisibleEnabled = isInvisible
+    updateCharacterReferences()
+    applyTransparency(isInvisible)
+
+    if isInvisible then
+        startInvisibleHeartbeat()
+    else
+        stopInvisibleHeartbeat()
+        applyTransparency(false)
+    end
+    updateInvisibleButton()
+end
+
+player.CharacterAdded:Connect(function(newChar)
+    isInvisible = false
+    invisibleEnabled = false
+    stopInvisibleHeartbeat()
+    updateInvisibleButton()
+    task.wait(0.5)
+    updateCharacterReferences()
+end)
+
+makeDraggable(invisibleButton, invisibleButton, function()
+    if invisibleButton.Visible then
+        setLocalInvisible(not isInvisible)
+    end
+end)
 
 local NotifContainer = Instance.new("Frame")
 NotifContainer.Name = "ClanxitadosMinimalNotifs"
@@ -125,267 +406,6 @@ else
     return
 end
 
-local Locales = {
-    English = {
-        tab_home="Home",tab_aim="Aim",tab_vis="Esp",tab_farm="Event",tab_killall="Auto Kill",tab_racha="Farm",
-        tab_anim="Animations",tab_music="Music",tab_bg="Backgrounds",tab_emotes="Emotes",tab_items="Items",
-        tab_com="Community",tab_owners="Owners",tab_warn="Warnings",tab_update="Update",tab_guardado="Saved",
-        tab_sounds="Sounds",
-        sec_owners="Owners",sec_profile="Player Profile",
-        sec_settings="Settings",sec_server="Server Information",sec_games="Available Games",sec_autoshoot="Auto Shoot",
-        sec_silentaim="Silent Aim + Fov",sec_killall="Kill All",sec_hitbox="Hitbox Expander",sec_autotp="Auto Teleport Main/Alt",
-        sec_esp_cfg="ESP Configuration",sec_farm_event="Event Farming",
-        sec_anim_bundles="Full Bundles",sec_anim_mixer="Animation Mixer",
-        sec_now_playing="Now Playing",sec_controls="Controls",sec_music_pick="Select Music",sec_music_prefs="Playback Preferences",
-        sec_music_ids="Music IDs",sec_theme="Interface Theme",sec_emotes_list="Available Emotes",sec_emotes_ids="Emote IDs",
-        sec_items="Items",sec_com="Community",sec_warning="Warning",sec_team="Clanxitados Team",sec_updates="Updates",
-        sec_changes="Changes",sec_warn_update="Warning",sec_keybinds="Keybinds",sec_config_manager="Config Manager",
-        sec_official_creator="OFFICIAL CREATOR",sec_notes="NOTES",
-        sec_kill_sound="Select kill sound",
-        kill_sound_toggle="Kill Sound",
-        kill_sound_toggle_desc="Plays a sound effect when you kill an enemy.",
-        kill_sound_pick="Kill sound",
-        kill_sound_pick_desc="Choose the effect that plays when you kill.",
-        kill_sound_volume="Sound Volume",
-        kill_sound_volume_desc="Adjusts how loud the kill sound plays.",
-        recarga_disparo_toggle="Reload + Shot",
-        recarga_disparo_toggle_desc="Sounds changed.",
-        sound_onichaaan="Onichaaan",
-        sound_omagaaa="Omagaaa",
-        sound_korummm="korummm",
-        sound_faah="FAAAH XD",
-        profile_user="User",profile_id="ID",profile_age="Account age",profile_days="days",profile_system="System",
-        profile_exec="Current executor",profile_community="Community",profile_actives="Actives",profile_game="Current Game",
-        profile_placeid="Place ID",
-        game_duels="Sheriffs vs Assassins [Duels]",game_mono="Escape Monkey [Monkey]",game_mm2="Murder Mystery [MM2]",game_afilado="Sharpened [Sword]",game_prison="Prison Life [Police]",
-        aim_autoshoot="AutoShot",aim_autoshoot_desc="Automatically shoots at torso or head without missing.",
-        aim_agresivo="AutoShot Agresive",aim_agresivo_desc="Shoots any visible pixel of the enemy's body.",
-        aim_knife="Knife Aimbot",aim_knife_desc="Goes fast to the rival",
-        aim_equip_gun="Auto Equip Gun",aim_equip_gun_desc="Quickly equips the gun.",
-        aim_silent="Silent Aim",aim_silent_desc="Redirects bullets to the enemy.",aim_target="Target",
-        aim_silent_fov="Silent Aim With FOV",aim_silent_fov_desc="Same as Silent Aim, but only affects enemies inside the circle.",
-        aim_show_fov="Show FOV Circle",aim_show_fov_desc="Draws a circle on screen.",aim_fov_size="Fov Size",
-        ka_title="Auto Kill",ka_desc="Beta phase",
-        ka_keybind="Kill All Key",ka_keybind_desc="Key to toggle Kill All",
-        ka_jitter="Jitter",ka_jitter_desc="Side-to-side jitter to look legit",
-        ka_trigger="Trigger Radius",ka_trigger_desc="Distance at which Kill All activates",
-        hit_activate="Hitbox",hit_activate_desc="Adds a rectangular hitbox to enemies.",
-        hit_invisible="Hitbox Invisible",hit_invisible_desc="Makes the hitbox completely transparent.",
-        hit_size="Hitbox Size",hit_color="Hitbox Color",
-        atp_main="Main",atp_main_desc="Teleports you to the Main platform. Disables if you enable Alt.",
-        atp_alt="Alt",atp_alt_desc="Teleports you to the Alt platform. Disables if you enable Main.",
-        atp_type="Type",atp_row="Plataform",
-        esp_toggle="ESP",esp_color="ESP Color",
-        farm_event="Farm Event",
-        anim_bundle="Choose Bundle",anim_apply="Apply Full Bundle",anim_restore="Restore Default",
-        anim_idle="Idle",anim_walk="Walk",anim_run="Run",anim_jump="Jump",anim_fall="Fall",anim_climb="Climb",anim_swim="Swim",
-        anim_combine="Combine and Apply",anim_none="None",
-        music_now_none="No song selected",music_now_desc="Press Play to start",
-        music_prev="Previous",music_prev_desc="Go back to the previous song",
-        music_next="Next",music_next_desc="Skip to the next song",
-        music_play="Play",music_play_desc="Start or resume current song",
-        music_pause="Pause",music_pause_desc="Pause playback without losing progress",
-        music_stop="Stop",music_stop_desc="Cuts music completely",
-        music_song="Song",music_song_desc="Pick a song from the list to play it",
-        music_shuffle="Shuffle Playback",music_shuffle_desc="Picks a random song each time it advances",
-        music_repeat="Repeat Song",music_repeat_desc="Replays the same song when it ends",
-        music_vol="Volume",music_vol_desc="Adjusts how loud the music plays",
-        music_name="Song Name",music_name_ph="E.g.: My song",
-        music_id="Roblox ID (rbxassetid)",music_id_ph="E.g.: 1234567890",
-        music_add="Add Song",music_add_desc="Saves the name and ID above to the list",
-        music_playing="Playing",music_paused="Paused",
-        bg_select="Select Background",bg_apply="Apply",bg_theme="Select Theme",bg_theme_desc="Changes the color theme of WindUI",
-        emote_pick="Emote",emote_pick_desc="Pick an emote for your character (requires R15 avatar)",
-        emote_play="Play Emote",emote_play_desc="Plays the selected emote on your character",
-        emote_stop="Stop Emote",emote_stop_desc="Stops the current emote",
-        emote_name="Emote Name",emote_name_ph="E.g.: My emote",
-        emote_id="Roblox ID (rbxassetid)",emote_id_ph="E.g.: 1234567890",
-        emote_loop="Loop",emote_loop_desc="Enable only if the emote is a dance made to loop",
-        emote_add="Add Emote",emote_add_desc="Saves the name, ID and loop type to the list",
-        items_headless="Apply Headless",items_headless_desc="Headless visual",
-        items_korblox="Apply Korblox",items_korblox_desc="Korblox visual",
-        com_whatsapp="WhatsApp Group",com_link_copied="Link Copied!",
-        com_link_text="Open WhatsApp and paste the link to join the group.",
-        com_discord_title="Join our WhatsApp Group",com_discord_desc="Click the button below to copy the invite link.",
-        com_discord_button="Copy WhatsApp Invite",
-        com_discord2_title="Join our Discord Server",
-        com_discord2_desc="Click the button below to copy the Discord invite link.",
-        com_discord2_button="Copy Discord Invite",
-        warn_staff="Kill All is still in beta, it's not recommended in public servers.",
-        warn_responsabilidad="The Clanxitados team is not responsible if you get banned from the game, use it at your own risk.",
-        warn_updates="Updates every week",
-        owner_title="Clanxitados",owner_desc="[Owner] 7.dui\n\nMain creator and programmer responsible.",
-        admin_title="SAMXHQQ",admin_desc="[Admin] samxh\n\nGraphic designer and idea creator.",
-        helper_title="XIN",helper_desc="[Helper] AminVega\n\nScript testing assistant.",
-        support_title="ANTOX",support_desc="[Support] Antox\n\nAdministration keeping everything in order.",
-        thanks_title="Thanks for using Clanxitados-Hub", thanks_desc="Your support motivates us to keep improving.\n\nFollow us for more updates!",
-        upd_next="Next update",upd_date="Date: 01/10/2026",upd_changes1="+ 3 improvements to tabs.",
-        upd_changes2="+ AutoShoot fixed",upd_changes3="+ 4 new backgrounds",
-        upd_warn1="Kill All is still under maintenance.",
-        upd_warn2="Report any errors or bugs in the WhatsApp group to fix them as quickly as possible.",
-        upd_last="Last update: ", upd_new="New:", upd_fixes="Fixes:",
-        language="Language",
-        owner_founder_tag="FOUNDER",
-        owner_role_desc="Founder and creator of the Open HUB project",
-        notes_title="CREATOR MESSAGE",
-        notes_desc="Hi, I'm 7.dui, creator of Open HUB and currently the script is in its best phase, I would appreciate your patience for future updates since I am the only one who does the whole script.\n\nI don't have anyone to help me with this but even so it doesn't stop me from continuing with this.\n\nTHANKS FOR USING Clanxitados, YOUR SUPPORT KEEPS MOTIVATING ME TO CONTINUE WITH THIS!!",
-        config_select="Select Configuration", config_refresh="Refresh List", config_name="Name to Save",
-        config_name_ph="E.g.: Config 1, Config 2...", config_save="Save Configuration", config_load="Load Configuration",
-        config_none="None", config_saved_msg="Saved as: ", config_loaded_msg=" loaded successfully.",
-        config_list_updated="Config list updated.", config_no_selected="No configuration selected.",
-        config_delete_all="Delete all saves", config_delete_all_desc="Permanently deletes ALL saved configurations.",
-        config_delete_all_confirm="Are you sure? Press again to confirm.", config_delete_all_done="All configurations were deleted.",
-        config_write_name="Enter a name to save the configuration.",
-    },
-    Espanol = {
-        tab_home="Inicio",tab_aim="Aim",tab_vis="Esp",tab_farm="Event",tab_killall="Auto Kill",tab_racha="Farm",
-        tab_anim="Animaciones",tab_music="Música",tab_bg="Fondos",tab_emotes="Emotes",tab_items="Items",
-        tab_com="Comunidad",tab_owners="Owners",tab_warn="Avisos",tab_update="Update",tab_guardado="Guardado",
-        tab_sounds="Sonidos",
-        sec_owners="Owners",sec_profile="Perfil del Jugador",
-        sec_settings="Ajustes",sec_server="Información del Servidor",sec_games="Juegos disponibles",sec_autoshoot="Auto Shoot",
-        sec_silentaim="Silent Aim + Fov",sec_killall="Kill All",sec_hitbox="Hitbox Expander",sec_autotp="Auto Teleport Main/Alt",
-        sec_esp_cfg="Configuración de ESP",sec_farm_event="Farmeo de Evento",
-        sec_anim_bundles="Paquetes Completos",sec_anim_mixer="Mezclador de Animaciones",
-        sec_now_playing="Ahora suena",sec_controls="Controles",sec_music_pick="Seleccionar música",
-        sec_music_prefs="Preferencias de reproducción",sec_music_ids="IDs de música",
-        sec_theme="Tema de la Interfaz",sec_emotes_list="Emotes disponibles",sec_emotes_ids="IDs de emotes",
-        sec_items="Items",sec_com="Comunidad",sec_warning="Aviso",sec_team="Equipo Clanxitados",
-        sec_updates="Actualizaciones",sec_changes="Cambios",sec_warn_update="Aviso",sec_keybinds="Teclas",sec_config_manager="Gestor de Configs",
-        sec_official_creator="CREADOR OFICIAL",sec_notes="NOTAS",
-        sec_kill_sound="Seleccionar sonido de muerte",
-        kill_sound_toggle="Sonido de Kill",
-        kill_sound_toggle_desc="Reproduce un efecto cuando matas a un enemigo.",
-        kill_sound_pick="Sonido de muerte",
-        kill_sound_pick_desc="Elige el efecto que suena al matar.",
-        kill_sound_volume="Volumen del Sonido",
-        kill_sound_volume_desc="Ajusta qué tan fuerte suena el sonido al matar.",
-        recarga_disparo_toggle="Recarga + disparo",
-        recarga_disparo_toggle_desc="Sonidos cambiandos.",
-        sound_onichaaan="Onichaaan",
-        sound_omagaaa="Omagaaa",
-        sound_korummm="korummm",
-        sound_faah="FAAAH XD",
-        profile_user="Usuario",profile_id="ID",profile_age="Edad de la cuenta",profile_days="días",profile_system="Sistema",
-        profile_exec="Ejecutor actual",profile_community="Comunidad",profile_actives="Activos",profile_game="Juego Actual",
-        profile_placeid="Place ID",
-        game_duels="Sheriffs vs Asesinos [Duels]",game_mono="Escapa mono [Monkey]",game_mm2="Murder Mystery [MM2]",game_afilado="Afilado [Sword]",game_prison="Vida en prisión [Police]",
-        aim_autoshoot="AutoShot",aim_autoshoot_desc="Dispara automáticamente al torso o cabeza sin fallar.",
-        aim_agresivo="AutoShot Agresive",aim_agresivo_desc="Dispara a cualquier píxel visible del cuerpo del enemigo.",
-        aim_knife="Knife Aimbot",aim_knife_desc="Va rápido al rival",
-        aim_equip_gun="Auto Equip Gun",aim_equip_gun_desc="Equipa rápidamente la pistola.",
-        aim_silent="Silent Aim",aim_silent_desc="Redirige las balas al enemigo.",aim_target="Target",
-        aim_silent_fov="Silent Aim With FOV",aim_silent_fov_desc="Igual que el Silent Aim, pero solo afecta a los enemigos dentro del círculo.",
-        aim_show_fov="Mostrar Círculo FOV",aim_show_fov_desc="Dibuja un círculo en pantalla.",aim_fov_size="Fov Size",
-        ka_title="Auto Kill",ka_desc="Fase beta",
-        ka_keybind="Tecla Kill All",ka_keybind_desc="Tecla para activar/desactivar Kill All",
-        ka_jitter="Vibración",ka_jitter_desc="Vibración corta mientras se acerca",
-        ka_trigger="Radio de Activación",ka_trigger_desc="Distancia en la que se activa",
-        hit_activate="Hitbox",hit_activate_desc="Añade una hitbox cúbica a los enemigos.",
-        hit_invisible="Hitbox Invisible",hit_invisible_desc="Hace la hitbox completamente transparente.",
-        hit_size="Hitbox Size",hit_color="Hitbox Color",
-        atp_main="Main",atp_main_desc="Te teletransporta a la plataforma Main. Se desactiva si activás Alt.",
-        atp_alt="Alt",atp_alt_desc="Te teletransporta a la plataforma Alt. Se desactiva si activás Main.",
-        atp_type="Type",atp_row="Plataform",
-        esp_toggle="ESP",esp_color="ESP Color",
-        farm_event="Farm Event",
-        anim_bundle="Elegir Paquete",anim_apply="Aplicar Paquete Completo",anim_restore="Restaurar Default",
-        anim_idle="Reposo",anim_walk="Caminar",anim_run="Correr",anim_jump="Saltar",anim_fall="Caer",anim_climb="Escalar",anim_swim="Nadar",
-        anim_combine="Combinar y Aplicar",anim_none="Ninguno",
-        music_now_none="Sin canción seleccionada",music_now_desc="Presiona Reproducir para comenzar",
-        music_prev="Anterior",music_prev_desc="Retrocede a la canción previa",
-        music_next="Siguiente",music_next_desc="Avanza a la siguiente canción",
-        music_play="Reproducir",music_play_desc="Inicia o reanuda la canción actual",
-        music_pause="Pausar",music_pause_desc="Pausa la reproducción sin perder el avance",
-        music_stop="Detener",music_stop_desc="Corta la música por completo",
-        music_song="Canción",music_song_desc="Elige una canción de la lista para reproducirla",
-        music_shuffle="Reproducción aleatoria",music_shuffle_desc="Elige una canción al azar cada vez que avanza",
-        music_repeat="Repetir canción",music_repeat_desc="Vuelve a reproducir la misma canción al terminar",
-        music_vol="Volumen",music_vol_desc="Ajusta qué tan fuerte suena la música",
-        music_name="Nombre de la canción",music_name_ph="Ej: Mi canción",
-        music_id="ID de Roblox (rbxassetid)",music_id_ph="Ej: 1234567890",
-        music_add="Añadir canción",music_add_desc="Guarda el nombre e ID escritos arriba en la lista",
-        music_playing="Reproduciendo",music_paused="Pausado",
-        bg_select="Seleccionar fondo",bg_apply="Aplicar",bg_theme="Seleccionar Tema",bg_theme_desc="Cambia el tema de color de la WindUI",
-        emote_pick="Emote",emote_pick_desc="Elige un emote para tu personaje (requiere avatar R15)",
-        emote_play="Reproducir emote",emote_play_desc="Reproduce el emote seleccionado en tu personaje",
-        emote_stop="Detener emote",emote_stop_desc="Detiene el emote actual",
-        emote_name="Nombre del emote",emote_name_ph="Ej: Mi emote",
-        emote_id="ID de Roblox (rbxassetid)",emote_id_ph="Ej: 1234567890",
-        emote_loop="Repetir en bucle",emote_loop_desc="Actívalo solo si el emote es un baile hecho para loopearse",
-        emote_add="Añadir emote",emote_add_desc="Guarda el nombre, ID y loop en la lista",
-        items_headless="Aplicar Headless",items_headless_desc="Headless visual",
-        items_korblox="Aplicar Korblox",items_korblox_desc="Korblox visual",
-        com_whatsapp="Grupo de WhatsApp",com_link_copied="Link Copiado!",
-        com_link_text="Abre WhatsApp y pega el enlace para unirte al grupo.",
-        com_discord_title="Únete al grupo de WhatsApp",com_discord_desc="Haz clic en el botón de abajo para copiar el link de invitación.",
-        com_discord_button="Copiar invitación de WhatsApp",
-        com_discord2_title="Únete al servidor de Discord",
-        com_discord2_desc="Haz clic en el botón de abajo para copiar el link de invitación de Discord.",
-        com_discord2_button="Copiar invitación de Discord",
-        warn_staff="El kill all sigue en fase beta, no es recomendable en sv público.",
-        warn_responsabilidad="El equipo de Clanxitados no se hace responsable si resultas baneado del juego, úsalo bajo tu propia responsabilidad.",
-        warn_updates="Actualizaciones cada semana",
-        owner_title="Clanxitados",owner_desc="[Owner] 7.dui\n\nCreador principal y responsable del programador.",
-        admin_title="SAMXHQQ",admin_desc="[Admin] samxh\n\nDiseñador gráfico y creador de ideas.",
-        helper_title="XIN",helper_desc="[Helper] AminVega\n\nAyudante de probar los scritps.",
-        support_title="ANTOX",support_desc="[Soporte] Antox\n\nAdministración de mantener todo en orden.",
-        thanks_title="Gracias por usar Clanxitados-Hub", thanks_desc="Tu apoyo nos motiva a seguir mejorando.\n\nSíguenos para más actualizaciones!",
-        upd_next="Siguiente actualización",upd_date="Fecha: 01/10/2026",upd_changes1="+ 3 mejoras en las pestañas.",
-        upd_changes2="+ AutoShoot arreglado",upd_changes3="+ 4 nuevos fondos",
-        upd_warn1="Kill All sigue en mantenimiento.",
-        upd_warn2="Cualquier error o bug reportenlo en el grupo de WhatsApp para arreglarlo lo más rápido posible.",
-        upd_last="Última actualización: ", upd_new="Nuevo:", upd_fixes="Arreglos:",
-        language="Idioma",
-        owner_founder_tag="FOUNDER",
-        owner_role_desc="Fundador y creador del proyecto Open HUB",
-        notes_title="MENSAJE DEL CREADOR",
-        notes_desc="Hola soy 7.dui, el creador de Open HUB y actualmente el script esta en su mejor fase, les agradecería que tuvieran paciencia para las futuras actualizaciones ya que solo soy yo quien hace todo el script.\n\nNo tengo a nadie quien me ayude en esto pero aun así no me detiene a seguir con esto.\n\nGRACIAS POR USAR Clanxitados, SU APOYO ME SIGUE MOTIVANDO A SEGUIR CON ESTO!!",
-        config_select="Seleccionar Configuración", config_refresh="Actualizar Lista", config_name="Nombre para Guardar",
-        config_name_ph="Ej: Config 1, Config 2...", config_save="Guardar Configuración", config_load="Cargar Configuración",
-        config_none="Ninguna", config_saved_msg="Guardado como: ", config_loaded_msg=" cargada con éxito.",
-        config_list_updated="Lista de configuraciones actualizada.", config_no_selected="No hay ninguna configuración seleccionada.",
-        config_delete_all="Eliminar todos los guardados", config_delete_all_desc="Borra TODAS las configuraciones guardadas permanentemente.",
-        config_delete_all_confirm="¿Seguro? Presiona de nuevo para confirmar.", config_delete_all_done="Todas las configuraciones fueron eliminadas.",
-        config_write_name="Escribe un nombre para guardar la configuración.",
-    },
-}
-
-WindUI:Localization({
-    Enabled = true,
-    Prefix = "loc:",
-    DefaultLanguage = "Espanol",
-    Translations = {
-        ["English"] = Locales.English,
-        ["Espanol"] = Locales.Espanol,
-    },
-})
-
-local Settings = { Language = "Espanol" }
-
-local function normalizeLang(v)
-    v = tostring(v or "")
-    if v == "en" or v == "English" or v == "Ingles" then return "English" end
-    return "Espanol"
-end
-
-local function currentLang() return normalizeLang(Settings.Language) end
-local refreshTranslatableElements = function() end
-
-local function setLang(v)
-    Settings.Language = normalizeLang(v)
-    pcall(function() WindUI:SetLanguage(Settings.Language) end)
-    pcall(function() refreshTranslatableElements() end)
-    return Settings.Language
-end
-
-local function L(key, ...)
-    local code = currentLang()
-    local tbl = Locales[code] or Locales.Espanol
-    local text = tbl[key] or Locales.Espanol[key] or key
-    if select("#", ...) > 0 then return string.format(text, ...) end
-    return text
-end
 
 local Window = WindUI:CreateWindow({
     Title = "Clan <font color='#ff7575'>Xitados</font>",
@@ -421,6 +441,7 @@ local Tabs = {
     KillAll = Window:Tab({ Title = "Auto Kill", Icon = "solar:danger-triangle-bold" }),
     RachaFarm = Window:Tab({ Title = "Farm", Icon = "solar:flame-bold" }),
     Farm = Window:Tab({ Title = "Event", Icon = "solar:dollar-bold" }),
+    Anim = Window:Tab({ Title = "Animaciones", Icon = "solar:user-bold" }),
     Performance = Window:Tab({ Title = "Performance", Icon = "solar:cpu-bolt-bold" })
 }
 
@@ -1104,818 +1125,6 @@ end
 
 AutoTeleportMainAltInstance = AutoTeleportMainAlt.new()
 
-local KILLALL_MOVE_SPEED               = 39.9
-local KILLALL_APPROACH_DISTANCE        = 2.5
-local KILLALL_APPROACH_TOLERANCE       = 0.35
-local KILLALL_SWING_INTERVAL           = 0.1
-local KILLALL_SAFE_GROUND_THRESHOLD    = 3
-local KILLALL_STICK_MAX_TIME           = 2.5
-local KILLALL_STICK_MAX_DISTANCE       = 20
-local KILLALL_VOID_PROTECTION          = 15
-local KILLALL_HEALTH_STALL_TIME        = 1.5
-local KILLALL_TARGET_GRACE_TIME        = 1.2
-local KILLALL_PITCH_DEGREES            = 90
-local KILLALL_HEIGHT_OFFSET            = 1.9
-local KILLALL_HIDE_DEPTH               = 4
-local KILLALL_HIDE_DURATION            = 0.5
-local KILLALL_KNIFE_RANGE_Y            = 4.5
-local KILLALL_PREDICTION_TIME          = 0.08
-
-local KILLALL_JITTER_AMPLITUDE         = 0
-local KILLALL_JITTER_SWITCH_MIN        = 0.05
-local KILLALL_JITTER_SWITCH_MAX        = 0.12
-local KILLALL_JITTER_LERP_SPEED        = 25
-
-local KILLALL_UNDERGROUND_DEPTH        = 5
-local KILLALL_UNDERGROUND_TOLERANCE    = 1.5
-
-local KILLALL_TRIGGER_RADIUS           = 9.0
-local KILLALL_VALIDATION_TOLERANCE     = 1.0
-local KILLALL_VALIDATION_FRAMES        = 3
-
-local KillAll = {}
-KillAll.__index = KillAll
-
-function KillAll.new()
-    return setmetatable({
-        running = false,
-        connections = ConnectionManager.new(),
-        savedCollisions = {},
-        swingAccumulator = 0,
-        safePosition = nil,
-        sticking = false,
-        stickingStartTime = 0,
-        lastEnemyHealth = nil,
-        lastHealthChangeTime = 0,
-        lastTargetSeenTime = 0,
-        currentTarget = nil,
-        lockedTargetPlayer = nil,
-        lastStickTarget = nil,
-        lastStickTargetHum = nil,
-        hiding = false,
-        hidingUntil = 0,
-        targetFloor = nil,
-        targetFloorY = nil,
-        lastFloorTarget = nil,
-        inKnifeRangeNow = false,
-        forceDescent = false,
-        jitterSide = 1,
-        jitterCurrent = 0,
-        jitterNextSwitch = 0,
-        lastSetCFrame = nil,
-        validFrames = 0,
-        killActivated = false,
-    }, KillAll)
-end
-
-function KillAll:DisableCollisions()
-    local char = player.Character
-    if not char then return end
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.CanCollide then
-            if self.savedCollisions[part] == nil then
-                self.savedCollisions[part] = part.CanCollide
-            end
-            part.CanCollide = false
-        end
-    end
-end
-
-function KillAll:RestoreCollisions()
-    for part, value in pairs(self.savedCollisions) do
-        if part.Parent then
-            pcall(function() part.CanCollide = value end)
-        end
-    end
-    table.clear(self.savedCollisions)
-end
-
-function KillAll:GetRoot(p)
-    local char = p and p.Character
-    if not char then return nil end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if root and root:IsA("BasePart") then return root end
-    return nil
-end
-
-function KillAll:GetHumanoid(p)
-    local char = p and p.Character
-    return char and char:FindFirstChildOfClass("Humanoid") or nil
-end
-
-function KillAll:GetFloorY(targetRoot)
-    local hum = targetRoot.Parent and targetRoot.Parent:FindFirstChildOfClass("Humanoid")
-    local hip = hum and tonumber(hum.HipHeight) or 2
-    return targetRoot.Position.Y - hip - targetRoot.Size.Y / 2
-end
-
-function KillAll:GetPlatformFloorY(targetRoot)
-    if not targetRoot then return nil end
-    if self.lastFloorTarget == targetRoot and self.targetFloorY then
-        return self.targetFloorY
-    end
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = { player.Character, targetRoot.Parent }
-    local origin = targetRoot.Position + Vector3.new(0, 3, 0)
-    local result = workspace:Raycast(origin, Vector3.new(0, -500, 0), params)
-    if result then
-        self.targetFloorY = result.Position.Y
-        self.lastFloorTarget = targetRoot
-        return self.targetFloorY
-    end
-    self.targetFloorY = self:GetFloorY(targetRoot)
-    self.lastFloorTarget = targetRoot
-    return self.targetFloorY
-end
-
-function KillAll:IsInKnifeRange(myRoot, targetRoot)
-    if not myRoot or not targetRoot then return false end
-    local delta = targetRoot.Position - myRoot.Position
-    local horizontal = Vector3.new(delta.X, 0, delta.Z).Magnitude
-    local vertical = math.abs(delta.Y)
-    return horizontal <= (KILLALL_APPROACH_DISTANCE + KILLALL_APPROACH_TOLERANCE) and vertical <= KILLALL_KNIFE_RANGE_Y
-end
-
-function KillAll:IsLockedTargetValid()
-    local lp = self.lockedTargetPlayer
-    if not lp then return false end
-    if not lp.Parent then return false end
-    if not esEnemigoValido(lp) then return false end
-    local char = lp.Character
-    if not char then return false end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not root or not hum then return false end
-    if hum.Health <= 0 then return false end
-    return root
-end
-
-function KillAll:GetPredictedPos(targetRoot)
-    local vel = Vector3.zero
-    if targetRoot:IsA("BasePart") then
-        vel = targetRoot.AssemblyLinearVelocity
-    end
-    vel = Vector3.new(vel.X, 0, vel.Z)
-    return targetRoot.Position + vel * KILLALL_PREDICTION_TIME
-end
-
-function KillAll:GetClosestEnemy()
-    local myRoot = self:GetRoot(player)
-    if not myRoot then return nil end
-
-    local lockedRoot = self:IsLockedTargetValid()
-    if lockedRoot then
-        return lockedRoot
-    end
-
-    self.lockedTargetPlayer = nil
-    self.currentTarget = nil
-
-    local best, bestDist, bestPlayer = nil, nil, nil
-    for _, other in ipairs(Players:GetPlayers()) do
-        if other ~= player and esEnemigoValido(other) then
-            local hum = self:GetHumanoid(other)
-            local root = self:GetRoot(other)
-            if root and hum and hum.Health > 0 then
-                local dist = (root.Position - myRoot.Position).Magnitude
-                if not bestDist or dist < bestDist then
-                    best, bestDist, bestPlayer = root, dist, other
-                end
-            end
-        end
-    end
-
-    if bestPlayer then
-        self.lockedTargetPlayer = bestPlayer
-    end
-
-    return best
-end
-
-function KillAll:IsInMatch()
-    return IsInMatchStrict()
-end
-
-function KillAll:ResetState()
-    self.sticking = false
-    self.stickingStartTime = 0
-    self.lastEnemyHealth = nil
-    self.lastHealthChangeTime = 0
-    self.targetFloor = nil
-    self.inKnifeRangeNow = false
-    self.forceDescent = false
-    self.jitterSide = 1
-    self.jitterCurrent = 0
-    self.jitterNextSwitch = 0
-    self.lastSetCFrame = nil
-    self.validFrames = 0
-    self.killActivated = false
-    self:RestoreCollisions()
-    local hum = self:GetHumanoid(player)
-    if hum and hum.PlatformStand then
-        pcall(function() hum.PlatformStand = false end)
-    end
-end
-
-function KillAll:ReturnToSafePosition(myRoot)
-    if not self.safePosition or not myRoot then return end
-    local currentY = myRoot.Position.Y
-    if currentY < (self.safePosition.Y - KILLALL_SAFE_GROUND_THRESHOLD) then
-        pcall(function()
-            myRoot.CFrame = CFrame.new(self.safePosition)
-            myRoot.AssemblyLinearVelocity  = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
-        end)
-    end
-end
-
-function KillAll:ForceReturnToSafe(myRoot)
-    if not self.safePosition or not myRoot then return end
-    pcall(function()
-        myRoot.CFrame = CFrame.new(self.safePosition)
-        myRoot.AssemblyLinearVelocity  = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
-    end)
-end
-
-function KillAll:IsFallingIntoVoid(myRoot)
-    if not self.safePosition or not myRoot then return false end
-    return myRoot.Position.Y < (self.safePosition.Y - KILLALL_VOID_PROTECTION)
-end
-
-function KillAll:HideBelowMap()
-    local myRoot = self:GetRoot(player)
-    if not myRoot then return end
-    local baseY = self.safePosition and self.safePosition.Y or myRoot.Position.Y
-    local hideY = baseY - KILLALL_HIDE_DEPTH
-    local currentX, currentZ = myRoot.Position.X, myRoot.Position.Z
-    pcall(function()
-        myRoot.CFrame = CFrame.new(currentX, hideY, currentZ)
-        myRoot.AssemblyLinearVelocity  = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
-    end)
-    self.hiding = true
-    self.hidingUntil = os.clock() + KILLALL_HIDE_DURATION
-end
-
-function KillAll:IsKnife(tool)
-    if not (tool and tool:IsA("Tool")) then return false end
-    if tool:FindFirstChild("fire") or tool:FindFirstChild("showBeam") then return false end
-    return tool:FindFirstChild("Slash") ~= nil or tool:FindFirstChild("SlashStart") ~= nil
-end
-
-function KillAll:FindKnife()
-    local char = player.Character
-    if char then
-        for _, child in ipairs(char:GetChildren()) do
-            if self:IsKnife(child) then return child, true end
-        end
-    end
-    local backpack = player:FindFirstChildOfClass("Backpack")
-    if backpack then
-        for _, child in ipairs(backpack:GetChildren()) do
-            if self:IsKnife(child) then return child, false end
-        end
-    end
-    return nil, false
-end
-
-function KillAll:SwingKnife(dt)
-    self.swingAccumulator = self.swingAccumulator + dt
-    if self.swingAccumulator < KILLALL_SWING_INTERVAL then return end
-    self.swingAccumulator = 0
-
-    local tool, equipped = self:FindKnife()
-    if not tool then return end
-
-    if not equipped then
-        local hum = self:GetHumanoid(player)
-        if not hum then return end
-        pcall(function() hum:EquipTool(tool) end)
-        if tool.Parent ~= player.Character then return end
-    end
-    pcall(function() tool:Activate() end)
-end
-
-function KillAll:UpdateJitter(dt)
-    local now = os.clock()
-    if now >= self.jitterNextSwitch then
-        self.jitterSide = (math.random() < 0.5) and 1 or -1
-        self.jitterNextSwitch = now + KILLALL_JITTER_SWITCH_MIN + math.random() * (KILLALL_JITTER_SWITCH_MAX - KILLALL_JITTER_SWITCH_MIN)
-    end
-    local targetOffset = self.jitterSide * KILLALL_JITTER_AMPLITUDE
-    self.jitterCurrent = self.jitterCurrent + (targetOffset - self.jitterCurrent) * math.clamp(dt * KILLALL_JITTER_LERP_SPEED, 0, 1)
-end
-
-function KillAll:CheckServerValidation(myRoot)
-    if self.killActivated then return true end
-    if not self.lastSetCFrame then return false end
-    local desiredPos = self.lastSetCFrame.Position
-    local actualPos = myRoot.Position
-    local diff = (actualPos - desiredPos).Magnitude
-
-    if diff <= KILLALL_VALIDATION_TOLERANCE then
-        self.validFrames = self.validFrames + 1
-        if self.validFrames >= KILLALL_VALIDATION_FRAMES then
-            self.killActivated = true
-            self.swingAccumulator = KILLALL_SWING_INTERVAL
-            return true
-        end
-    else
-        self.validFrames = 0
-    end
-    return false
-end
-
-function KillAll:ForceUnderground(myRoot, targetRoot)
-    if not myRoot or not targetRoot then return end
-    local floorY = self:GetPlatformFloorY(targetRoot)
-    if not floorY then return end
-    local targetY = floorY - KILLALL_UNDERGROUND_DEPTH
-    if myRoot.Position.Y > targetY + KILLALL_UNDERGROUND_TOLERANCE then
-        pcall(function()
-            myRoot.CFrame = CFrame.new(myRoot.Position.X, targetY, myRoot.Position.Z)
-            myRoot.AssemblyLinearVelocity  = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
-        end)
-    end
-end
-
-function KillAll:ApproachTarget(myRoot, targetRoot, dt)
-    dt = dt or 0
-    local myPos = myRoot.Position
-    local targetPos = targetRoot.Position
-
-    local deltaXZ = Vector3.new(targetPos.X - myPos.X, 0, targetPos.Z - myPos.Z)
-    local hDist = deltaXZ.Magnitude
-
-    if hDist <= KILLALL_TRIGGER_RADIUS then
-        if not self.sticking then
-            local lookTarget = Vector3.new(targetPos.X, myPos.Y, targetPos.Z)
-            local targetCF = CFrame.lookAt(myPos, lookTarget)
-            self.lastSetCFrame = targetCF
-            pcall(function()
-                myRoot.CFrame = targetCF
-                myRoot.AssemblyLinearVelocity = Vector3.zero
-                myRoot.AssemblyAngularVelocity = Vector3.zero
-            end)
-
-            if self:CheckServerValidation(myRoot) then
-                self.sticking = true
-                self.stickingStartTime = os.clock()
-                self.lastStickTarget = targetRoot
-                self.targetFloor = nil
-                self.forceDescent = true
-                local hum = self:GetHumanoid(targetRoot.Parent)
-                self.lastEnemyHealth = hum and hum.Health or nil
-                self.lastHealthChangeTime = os.clock()
-                self.lastStickTargetHum = hum
-                self.jitterCurrent = 0
-            end
-        end
-        return
-    end
-
-    self.lastSetCFrame = nil
-    self.validFrames = 0
-
-    local dir = deltaXZ.Unit
-    local perp = Vector3.new(-dir.Z, 0, dir.X)
-
-    self:UpdateJitter(dt)
-
-    local step = KILLALL_MOVE_SPEED * dt
-    local travel = math.min(step, math.max(0, hDist - KILLALL_TRIGGER_RADIUS))
-
-    local maxJitterByDistance = math.sqrt(math.max(0, travel * (2 * hDist - travel))) * 0.85
-    local jitterFactor = math.clamp((hDist - KILLALL_TRIGGER_RADIUS) / 8, 0, 1)
-    local desiredJitter = self.jitterCurrent * jitterFactor
-    local actualJitter = math.clamp(desiredJitter, -maxJitterByDistance, maxJitterByDistance)
-
-    local baseX = myPos.X + dir.X * travel
-    local baseZ = myPos.Z + dir.Z * travel
-    local newX = baseX + perp.X * actualJitter
-    local newZ = baseZ + perp.Z * actualJitter
-
-    local floorY = self:GetPlatformFloorY(targetRoot)
-    local newY
-    if floorY then
-        newY = floorY - KILLALL_UNDERGROUND_DEPTH
-    else
-        newY = myPos.Y
-    end
-
-    local newPos = Vector3.new(newX, newY, newZ)
-    local lookTarget = Vector3.new(targetPos.X, newPos.Y, targetPos.Z)
-    local newCFrame = CFrame.lookAt(newPos, lookTarget)
-
-    pcall(function()
-        myRoot.CFrame = newCFrame
-        myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
-    end)
-end
-
-function KillAll:CanStickToTarget(myRoot, targetRoot)
-    if not targetRoot or not targetRoot.Parent then return false end
-
-    local targetPlayer = Players:GetPlayerFromCharacter(targetRoot.Parent)
-    if not targetPlayer or not esEnemigoValido(targetPlayer) then return false end
-
-    local targetHum = targetRoot.Parent:FindFirstChildOfClass("Humanoid")
-    if not targetHum or targetHum.Health <= 0 then return false end
-
-    local distHorizontal = (Vector3.new(myRoot.Position.X, 0, myRoot.Position.Z) - Vector3.new(targetRoot.Position.X, 0, targetRoot.Position.Z)).Magnitude
-    if distHorizontal > KILLALL_STICK_MAX_DISTANCE then return false end
-
-    return true
-end
-
-function KillAll:StickToTarget(myRoot, targetRoot)
-    local targetPos = targetRoot.Position
-    local targetHum = targetRoot.Parent and targetRoot.Parent:FindFirstChildOfClass("Humanoid")
-    local onGround  = targetHum and targetHum.FloorMaterial ~= Enum.Material.Air
-
-    if targetRoot ~= self.lastStickTarget then
-        self.lastStickTarget = targetRoot
-        self.targetFloor     = nil
-    end
-
-    if onGround or not self.targetFloor then
-        self.targetFloor = self:GetFloorY(targetRoot)
-    end
-
-    local myPos = myRoot.Position
-    local dir = Vector3.new(myPos.X - targetPos.X, 0, myPos.Z - targetPos.Z)
-    if dir.Magnitude < 0.05 then
-        dir = Vector3.new(0, 0, 1)
-    else
-        dir = dir.Unit
-    end
-
-    local x = targetPos.X + dir.X * KILLALL_APPROACH_DISTANCE
-    local z = targetPos.Z + dir.Z * KILLALL_APPROACH_DISTANCE
-
-    local inRange = self:IsInKnifeRange(myRoot, targetRoot)
-    local y
-    if inRange and not self.forceDescent then
-        y = myPos.Y
-    else
-        y = self.targetFloor - KILLALL_HEIGHT_OFFSET
-        if inRange then
-            self.forceDescent = false
-        end
-    end
-
-    pcall(function()
-        myRoot.CFrame = CFrame.new(x, y, z) * CFrame.Angles(math.rad(KILLALL_PITCH_DEGREES), 0, 0)
-        myRoot.AssemblyLinearVelocity  = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
-    end)
-end
-
-function KillAll:CheckEnemyHealth(targetRoot)
-    local targetHum = targetRoot.Parent and targetRoot.Parent:FindFirstChildOfClass("Humanoid")
-    if not targetHum then return false end
-
-    local currentHealth = targetHum.Health
-
-    if self.lastEnemyHealth == nil then
-        self.lastEnemyHealth = currentHealth
-        self.lastHealthChangeTime = os.clock()
-        return false
-    end
-
-    if currentHealth < self.lastEnemyHealth then
-        self.lastEnemyHealth = currentHealth
-        self.lastHealthChangeTime = os.clock()
-        return false
-    end
-
-    if (os.clock() - self.lastHealthChangeTime) >= KILLALL_HEALTH_STALL_TIME then
-        return true
-    end
-
-    return false
-end
-
-function KillAll:Update(dt)
-    if not self:IsInMatch() then
-        self:ResetState()
-        self.currentTarget = nil
-        self.lockedTargetPlayer = nil
-        self.lastStickTarget = nil
-        self.lastFloorTarget = nil
-        self.targetFloorY = nil
-        return
-    end
-
-    local myRoot = self:GetRoot(player)
-    if not myRoot then
-        self:ResetState()
-        self.currentTarget = nil
-        self.lockedTargetPlayer = nil
-        return
-    end
-
-    if self.lastStickTargetHum then
-        local hum = self.lastStickTargetHum
-        if not hum.Parent or hum.Health <= 0 then
-            self:HideBelowMap()
-            self.inKnifeRangeNow      = false
-            self.forceDescent         = false
-            self.lastStickTargetHum   = nil
-            self.lastStickTarget      = nil
-            self.sticking             = false
-            self.stickingStartTime    = 0
-            self.lastEnemyHealth      = nil
-            self.lastHealthChangeTime = 0
-            self.targetFloor          = nil
-            self.killActivated        = false
-            self.validFrames          = 0
-            self.lastSetCFrame        = nil
-            return
-        end
-    end
-
-    if self.hiding then
-        if os.clock() >= self.hidingUntil then
-            self.hiding = false
-        else
-            pcall(function()
-                myRoot.AssemblyLinearVelocity  = Vector3.zero
-                myRoot.AssemblyAngularVelocity = Vector3.zero
-            end)
-            return
-        end
-    end
-
-    if self:IsFallingIntoVoid(myRoot) then
-        self:ForceReturnToSafe(myRoot)
-        self:ResetState()
-        self.currentTarget = nil
-        self.lockedTargetPlayer = nil
-        self.lastStickTarget = nil
-        local hum = self:GetHumanoid(player)
-        if hum then
-            pcall(function() hum.PlatformStand = false end)
-        end
-        return
-    end
-
-    local target = self:GetClosestEnemy()
-
-    if target then
-        self.currentTarget      = target
-        self.lastTargetSeenTime = os.clock()
-    end
-
-    if not target then
-        local justLostTarget = (os.clock() - (self.lastTargetSeenTime or 0)) < KILLALL_TARGET_GRACE_TIME
-        local isUnderground  = self.safePosition and myRoot.Position.Y < (self.safePosition.Y - 2)
-
-        if justLostTarget and isUnderground then
-            pcall(function()
-                myRoot.AssemblyLinearVelocity  = Vector3.zero
-                myRoot.AssemblyAngularVelocity = Vector3.zero
-            end)
-            return
-        end
-
-        self:ReturnToSafePosition(myRoot)
-        self:ResetState()
-        self.currentTarget = nil
-        self.lockedTargetPlayer = nil
-        self.lastStickTarget = nil
-        self.lastFloorTarget = nil
-        self.targetFloorY = nil
-        if self.safePosition then
-            local hum = self:GetHumanoid(player)
-            if hum then
-                pcall(function() hum.PlatformStand = false end)
-            end
-        end
-        return
-    end
-
-    self:DisableCollisions()
-
-    if self.lastStickTarget then
-        local inRange = self:IsInKnifeRange(myRoot, self.lastStickTarget)
-        if inRange and not self.inKnifeRangeNow then
-            self.swingAccumulator = KILLALL_SWING_INTERVAL
-            self.inKnifeRangeNow = true
-        elseif not inRange then
-            self.inKnifeRangeNow = false
-        end
-    end
-
-    self:SwingKnife(dt or 0)
-
-    local hum = self:GetHumanoid(player)
-    if hum and not hum.PlatformStand then
-        pcall(function() hum.PlatformStand = true end)
-    end
-
-    if self.safePosition and myRoot.Position.Y >= (self.safePosition.Y - KILLALL_SAFE_GROUND_THRESHOLD) then
-        self.safePosition = Vector3.new(myRoot.Position.X, self.safePosition.Y, myRoot.Position.Z)
-    end
-
-    if not self.sticking then
-        self:ForceUnderground(myRoot, target)
-    end
-
-    if self.sticking then
-        local lostTarget  = (target ~= self.lastStickTarget)
-        local timedOut    = (os.clock() - self.stickingStartTime) > KILLALL_STICK_MAX_TIME
-        local cannotStick = not self:CanStickToTarget(myRoot, target)
-        local cannotKill  = self:CheckEnemyHealth(target)
-
-        if lostTarget or timedOut or cannotStick or cannotKill then
-            self.sticking             = false
-            self.stickingStartTime    = 0
-            self.lastEnemyHealth      = nil
-            self.lastHealthChangeTime = 0
-            self.targetFloor          = nil
-            self.inKnifeRangeNow      = false
-            self.forceDescent         = false
-            self.killActivated        = false
-            self.validFrames          = 0
-            self.lastSetCFrame        = nil
-
-            if lostTarget then
-                self.lastStickTarget = nil
-            end
-        else
-            self:StickToTarget(myRoot, target)
-            return
-        end
-    end
-
-    self:ApproachTarget(myRoot, target, dt or 0)
-end
-
-function KillAll:Start()
-    if self.running then
-        KillAllEnabled = true
-        return
-    end
-    self.running = true
-    KillAllEnabled = true
-    self.swingAccumulator      = 0
-    self.sticking              = false
-    self.stickingStartTime     = 0
-    self.lastEnemyHealth       = nil
-    self.lastHealthChangeTime  = 0
-    self.lastTargetSeenTime    = 0
-    self.currentTarget         = nil
-    self.lockedTargetPlayer    = nil
-    self.lastStickTarget       = nil
-    self.lastStickTargetHum    = nil
-    self.hiding                = false
-    self.hidingUntil           = 0
-    self.targetFloor           = nil
-    self.targetFloorY          = nil
-    self.lastFloorTarget       = nil
-    self.inKnifeRangeNow       = false
-    self.forceDescent          = false
-    self.jitterSide = 1
-    self.jitterCurrent = 0
-    self.jitterNextSwitch = 0
-    self.lastSetCFrame = nil
-    self.validFrames = 0
-    self.killActivated = false
-
-    local myRoot = self:GetRoot(player)
-    if myRoot then
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Exclude
-        params.FilterDescendantsInstances = { player.Character }
-
-        local origin = myRoot.Position + Vector3.new(0, 5, 0)
-        local result = workspace:Raycast(origin, Vector3.new(0, -500, 0), params)
-
-        if result then
-            self.safePosition = Vector3.new(myRoot.Position.X, result.Position.Y + 3, myRoot.Position.Z)
-        else
-            self.safePosition = myRoot.Position
-        end
-    else
-        self.safePosition = nil
-    end
-
-    self.connections:Add(RunService.Heartbeat:Connect(function(dt)
-        if not self.running then return end
-        self:Update(dt)
-    end))
-
-    self.connections:Add(player.CharacterAdded:Connect(function()
-        table.clear(self.savedCollisions)
-        self.sticking              = false
-        self.safePosition          = nil
-        self.stickingStartTime     = 0
-        self.lastEnemyHealth       = nil
-        self.lastHealthChangeTime  = 0
-        self.lastTargetSeenTime    = 0
-        self.currentTarget         = nil
-        self.lockedTargetPlayer    = nil
-        self.lastStickTarget       = nil
-        self.lastStickTargetHum    = nil
-        self.hiding                = false
-        self.hidingUntil           = 0
-        self.targetFloor           = nil
-        self.targetFloorY          = nil
-        self.lastFloorTarget       = nil
-        self.inKnifeRangeNow       = false
-        self.forceDescent          = false
-        self.jitterSide = 1
-        self.jitterCurrent = 0
-        self.jitterNextSwitch = 0
-        self.lastSetCFrame = nil
-        self.validFrames = 0
-        self.killActivated = false
-    end))
-end
-
-function KillAll:Stop()
-    -- Apaga primero el bucle y desconecta las señales, aunque running se haya desincronizado.
-    self.running = false
-    KillAllEnabled = false
-    local activeConnections = self.connections
-    self.connections = ConnectionManager.new()
-    activeConnections:Cleanup()
-
-    local myRoot = self:GetRoot(player)
-    if myRoot and self.safePosition then
-        pcall(function()
-            myRoot.CFrame = CFrame.new(self.safePosition)
-            myRoot.AssemblyLinearVelocity  = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
-        end)
-    end
-
-    self:ResetState()
-    self.currentTarget      = nil
-    self.lockedTargetPlayer = nil
-    self.lastStickTarget    = nil
-    self.lastStickTargetHum = nil
-    self.hiding             = false
-    self.hidingUntil        = 0
-    self.inKnifeRangeNow    = false
-    self.forceDescent       = false
-    self.killActivated      = false
-    self.targetFloorY       = nil
-    self.lastFloorTarget    = nil
-    self.safePosition       = nil
-end
-
-KillAllInstance = KillAll.new()
-
-local killAllHitboxSnapshot = nil
-
-local function setKillAllHitbox(enabled)
-    if enabled then
-        if not killAllHitboxSnapshot then
-            killAllHitboxSnapshot = {
-                Enabled = hitboxEnabled,
-                Invisible = hitboxInvisible,
-                Size = hitboxSize
-            }
-        end
-        hitboxEnabled = true
-        hitboxInvisible = false
-        hitboxSize = 18
-    elseif killAllHitboxSnapshot then
-        hitboxEnabled = killAllHitboxSnapshot.Enabled
-        hitboxInvisible = killAllHitboxSnapshot.Invisible
-        hitboxSize = killAllHitboxSnapshot.Size
-        killAllHitboxSnapshot = nil
-        if not hitboxEnabled then limpiarHitboxes() end
-    end
-
-    if UIElements.TogHitbox then
-        pcall(function() UIElements.TogHitbox:Set(hitboxEnabled) end)
-    end
-    if UIElements.TogHitboxInvisible then
-        pcall(function() UIElements.TogHitboxInvisible:Set(hitboxInvisible) end)
-    end
-    if UIElements.SliHitboxSize then
-        pcall(function() UIElements.SliHitboxSize:Set(hitboxSize) end)
-    end
-end
-
-local function setKillAllEnabled(value)
-    KillAllEnabled = value == true
-    if KillAllEnabled then
-        setKillAllHitbox(true)
-        KillAllInstance:Start()
-    else
-        setKillAllHitbox(false)
-        KillAllInstance:Stop()
-    end
-end
-
 task.wait()
 
 Tabs.Aim:Section({ Title = "AutoShot" })
@@ -1924,6 +1133,7 @@ UIElements.TogAutoShoot = Tabs.Aim:Toggle({
     Callback = function(Value)
         autoShootEnabled = Value
         if not Value and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
+        SaveConfig()
     end
 })
 
@@ -1932,6 +1142,7 @@ UIElements.TogAutoShootAgr = Tabs.Aim:Toggle({
     Callback = function(Value)
         autoShootAgresivoEnabled = Value
         if not Value and not autoShootEnabled then getgenv().ClanxitadosTargetPart = nil end
+        SaveConfig()
     end
 })
 
@@ -1939,16 +1150,18 @@ UIElements.DropAutoShootPart = Tabs.Aim:Dropdown({
     Title = "Target",
     Values = { "Cabeza", "Torso", "Cuerpo Completo" },
     Value = "Torso",
-    Callback = function(Value) autoShootTargetPart = Value end
+    Callback = function(Value)
+        autoShootTargetPart = Value
+        SaveConfig()
+    end
 })
-
-local equipGunEnabled = false
 
 UIElements.TogEquipGun = Tabs.Aim:Toggle({
     Title = "Auto Equip Gun",
     Value = false,
     Callback = function(Value)
         equipGunEnabled = Value
+        SaveConfig()
     end
 })
 
@@ -2030,6 +1243,7 @@ UIElements.TogTriggerbot = Tabs.Aim:Toggle({
     Value = false,
     Callback = function(enabled)
         getgenv().TriggerEnabled = enabled
+        SaveConfig()
     end
 })
 
@@ -2060,12 +1274,173 @@ task.spawn(function()
     end
 end)
 
+
+local camlockTarget = nil
+local CAMLOCK_PREDICTION = 0.25
+
+local camlockRayParams = RaycastParams.new()
+camlockRayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function FindNearestEnemyCamlock()
+    local closestDist = math.huge
+    local closestPart = nil
+    local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+
+    local myChar = player.Character
+    local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
+    if not myHead then return nil end
+    local origin = myHead.Position
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and esEnemigoValido(p) then
+            local char = p.Character
+            if char then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 then
+                    local pos2d, onScreen = camera:WorldToViewportPoint(hrp.Position)
+                    if onScreen and pos2d.Z > 0 then
+                        
+                        camlockRayParams.FilterDescendantsInstances = { myChar, char }
+                        local dir = hrp.Position - origin
+                        local hit = workspace:Raycast(origin, dir, camlockRayParams)
+                        
+                        local visible = (not hit) or (hit.Instance and hit.Instance:IsDescendantOf(char))
+                        if visible then
+                            local dist = (screenCenter - Vector2.new(pos2d.X, pos2d.Y)).Magnitude
+                            if dist < closestDist then
+                                closestDist = dist
+                                closestPart = hrp
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestPart
+end
+
+local function tieneArmaEnMano()
+    local char = player.Character
+    if not char then return false end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return false end
+    return esPistola(tool)
+end
+
+local function tieneCuchilloEnMano()
+    local char = player.Character
+    if not char then return false end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return false end
+    return esCuchillo(tool)
+end
+
+local function camlockPuedeActivar()
+    if not camlockEnabled then return false end
+    if camlockGunOnly and camlockKnifeOnly then
+        
+        return tieneArmaEnMano() or tieneCuchilloEnMano()
+    elseif camlockGunOnly then
+        return tieneArmaEnMano()
+    elseif camlockKnifeOnly then
+        return tieneCuchilloEnMano()
+    end
+    return true 
+end
+
+Tabs.Aim:Section({ Title = "Camlock" })
+
+UIElements.TogCamlock = Tabs.Aim:Toggle({
+    Title = "Camlock",
+    Value = false,
+    Callback = function(v)
+        camlockEnabled = v == true
+        if not camlockEnabled then
+            camlockTarget = nil
+        end
+        SaveConfig()
+    end
+})
+
+UIElements.TogCamlockGunOnly = Tabs.Aim:Toggle({
+    Title = "Gun Only",
+    Value = false,
+    Callback = function(v)
+        camlockGunOnly = v == true
+        if camlockGunOnly and camlockKnifeOnly then
+            camlockKnifeOnly = false
+            if UIElements.TogCamlockKnifeOnly then
+                pcall(function() UIElements.TogCamlockKnifeOnly:Set(false) end)
+            end
+        end
+        SaveConfig()
+    end
+})
+
+UIElements.TogCamlockKnifeOnly = Tabs.Aim:Toggle({
+    Title = "Knife Only",
+    Value = false,
+    Callback = function(v)
+        camlockKnifeOnly = v == true
+        if camlockKnifeOnly and camlockGunOnly then
+            camlockGunOnly = false
+            if UIElements.TogCamlockGunOnly then
+                pcall(function() UIElements.TogCamlockGunOnly:Set(false) end)
+            end
+        end
+        SaveConfig()
+    end
+})
+
+local function camlockTargetVisible(targetPart)
+    if not targetPart or not targetPart.Parent then return false end
+    local myChar = player.Character
+    local myHead = myChar and (myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart"))
+    if not myHead then return false end
+    local enemyChar = targetPart.Parent
+    camlockRayParams.FilterDescendantsInstances = { myChar, enemyChar }
+    local dir = targetPart.Position - myHead.Position
+    local hit = workspace:Raycast(myHead.Position, dir, camlockRayParams)
+    if not hit then return true end
+    return hit.Instance and hit.Instance:IsDescendantOf(enemyChar)
+end
+
+RunService.Heartbeat:Connect(function()
+    if not camlockPuedeActivar() then
+        camlockTarget = nil
+        return
+    end
+
+    local needNew = false
+    if not camlockTarget or not camlockTarget.Parent then
+        needNew = true
+    else
+        local tp = Players:GetPlayerFromCharacter(camlockTarget.Parent)
+        if not tp or not esEnemigoValido(tp) or not camlockTargetVisible(camlockTarget) then
+            needNew = true
+        end
+    end
+
+    if needNew then
+        camlockTarget = FindNearestEnemyCamlock()
+    end
+
+    if camlockTarget and camlockTarget.Parent then
+        local cam = workspace.CurrentCamera
+        local predictPos = camlockTarget.Position + camlockTarget.AssemblyLinearVelocity * CAMLOCK_PREDICTION
+        cam.CFrame = CFrame.new(cam.CFrame.Position, predictPos)
+    end
+end)
+
 Tabs.Aim:Section({ Title = "Silent Aim" })
 UIElements.TogSilentAimManual = Tabs.Aim:Toggle({
     Title = "Silent Aim",
     Callback = function(Value)
         silentAimManualEnabled = Value
         if not Value and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
+        SaveConfig()
     end
 })
 
@@ -2073,14 +1448,18 @@ UIElements.DropSilentAimPart = Tabs.Aim:Dropdown({
     Title = "Target",
     Values = { "Cabeza", "Torso", "Cuerpo Completo" },
     Value = "Torso",
-    Callback = function(Value) silentAimTargetPart = Value end
+    Callback = function(Value)
+        silentAimTargetPart = Value
+        SaveConfig()
+    end
 })
 
 UIElements.TogSilentAimFOV = Tabs.Aim:Toggle({
-    Title = "Silent Aim With FOV",
+    Title = "Silent Aim With Fov",
     Callback = function(Value)
         silentAimFovEnabled = Value
         if not Value and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
+        SaveConfig()
     end
 })
 
@@ -2088,7 +1467,10 @@ UIElements.SliFOVSize = Tabs.Aim:Slider({
     Title = "Fov Size",
     Step = 1,
     Value = { Min = 10, Max = 800, Default = 120 },
-    Callback = function(v) fovRadius = v end
+    Callback = function(v)
+        fovRadius = v
+        SaveConfig()
+    end
 })
 
 Tabs.Aim:Section({ Title = "Hitbox" })
@@ -2098,26 +1480,36 @@ UIElements.TogHitbox = Tabs.Aim:Toggle({
     Callback = function(Value)
         hitboxEnabled = Value
         if not Value then limpiarHitboxes() end
+        SaveConfig()
     end
 })
 
 UIElements.TogHitboxInvisible = Tabs.Aim:Toggle({
     Title = "Hitbox Invisible",
     Value = false,
-    Callback = function(Value) hitboxInvisible = Value end
+    Callback = function(Value)
+        hitboxInvisible = Value
+        SaveConfig()
+    end
 })
 
 UIElements.SliHitboxSize = Tabs.Aim:Slider({
     Title = "Hitbox Size",
     Step = 0.5,
     Value = { Min = 1.0, Max = 30.0, Default = 5 },
-    Callback = function(v) hitboxSize = v end
+    Callback = function(v)
+        hitboxSize = v
+        SaveConfig()
+    end
 })
 
 Tabs.Aim:Colorpicker({
     Title = "Hitbox Color",
     Default = Color3.fromRGB(255, 0, 0),
-    Callback = function(c) hitboxColor = c end
+    Callback = function(c)
+        hitboxColor = c
+        SaveConfig()
+    end
 })
 
 getgenv().ClanxitadosTargetPart = nil
@@ -2318,10 +1710,31 @@ task.spawn(function()
     end
 end)
 
-UIElements.TogKillAll = Tabs.KillAll:Toggle({
-    Title = "Auto Kill",
+Tabs.KillAll:Section({ Title = "Menu Auto Kill" })
+
+UIElements.BtnMenuAutoKill = Tabs.KillAll:Button({
+    Title = "Menu Auto Kill",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/xitados/free/refs/heads/main/AutoKill"))()
+        end)
+    end
+})
+
+Tabs.KillAll:Section({ Title = "Invisible" })
+
+UIElements.TogInvisible = Tabs.KillAll:Toggle({
+    Title = "Invisible",
     Value = false,
-    Callback = setKillAllEnabled
+    Callback = function(enabled)
+        invisibleButton.Visible = enabled == true
+        if not enabled then
+            setLocalInvisible(false)
+        else
+            updateInvisibleButton()
+        end
+        SaveConfig()
+    end
 })
 
 
@@ -2387,37 +1800,55 @@ Tabs.RachaFarm:Dropdown({
 
 UIElements.TogEsp = Tabs.Vis:Toggle({
     Title = "ESP",
-    Callback = function(s) espEnabled = s end
+    Callback = function(s)
+        espEnabled = s
+        SaveConfig()
+    end
 })
 
 UIElements.ColEsp = Tabs.Vis:Colorpicker({
     Title = "ESP Color",
     Default = Color3.fromRGB(255, 0, 0),
-    Callback = function(c) espColor = c end
+    Callback = function(c)
+        espColor = c
+        SaveConfig()
+    end
 })
 
 UIElements.TogEspLine = Tabs.Vis:Toggle({
     Title = "ESP Line",
     Value = false,
-    Callback = function(s) espLineEnabled = s end
+    Callback = function(s)
+        espLineEnabled = s
+        SaveConfig()
+    end
 })
 
 UIElements.ColEspLine = Tabs.Vis:Colorpicker({
     Title = "ESP Line Color",
     Default = Color3.fromRGB(255, 0, 0),
-    Callback = function(c) espLineColor = c end
+    Callback = function(c)
+        espLineColor = c
+        SaveConfig()
+    end
 })
 
 UIElements.TogEspName = Tabs.Vis:Toggle({
     Title = "ESP Name",
     Value = false,
-    Callback = function(s) espNameEnabled = s end
+    Callback = function(s)
+        espNameEnabled = s
+        SaveConfig()
+    end
 })
 
 UIElements.ColEspName = Tabs.Vis:Colorpicker({
     Title = "ESP Name Color",
     Default = Color3.fromRGB(255, 0, 0),
-    Callback = function(c) espNameColor = c end
+    Callback = function(c)
+        espNameColor = c
+        SaveConfig()
+    end
 })
 
 local activeESPs = {}
@@ -2633,7 +2064,7 @@ getgenv().AutoEventFarm = false
 local Networking = ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Networking")
 local RemoteFarm = Networking and Networking:FindFirstChild("RE/Events/CollectEventSpawnable")
 
-Tabs.Farm:Toggle({
+UIElements.TogFarmEvent = Tabs.Farm:Toggle({
     Title = "Farm Event",
     Callback = function(s)
         getgenv().AutoEventFarm = s
@@ -2668,14 +2099,292 @@ Tabs.Farm:Toggle({
                 end
             end)
         end
+        SaveConfig()
     end
 })
 
 
 
-local NoTextureEnabled = false
-local NoShadowsEnabled = false
-local LightbrightEnabled = false
+-- ========== ANIMACIONES (exclusivas) ==========
+local AnimToggleElements = {}
+
+local function ApplyAnims(ids)
+    local char = player.Character
+    if not char or not ids then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local Animate = char:FindFirstChild("Animate")
+    if not Animate or not hum then return end
+
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if animator then
+        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+            pcall(function() track:Stop(0) end)
+        end
+    end
+
+    local function setAnimId(parentName, childName, newId)
+        local parentObj = Animate:FindFirstChild(parentName)
+        if parentObj then
+            local animObj = parentObj:FindFirstChild(childName)
+            if animObj and animObj:IsA("Animation") then
+                animObj.AnimationId = newId or "rbxassetid://0"
+            end
+        end
+    end
+
+    setAnimId("idle", "Animation1", ids.idle1)
+    setAnimId("idle", "Animation2", ids.idle2)
+    setAnimId("walk", "WalkAnim",   ids.walk)
+    setAnimId("run",  "RunAnim",    ids.run)
+    setAnimId("jump", "JumpAnim",   ids.jump)
+    setAnimId("fall", "FallAnim",   ids.fall)
+
+    Animate.Enabled = false
+    task.wait(0.03)
+    Animate.Enabled = true
+
+    if hum.Health > 0 then
+        pcall(function() hum:ChangeState(Enum.HumanoidStateType.Landed) end)
+    end
+end
+
+local AnimPacks = {
+    { Name = "Astronaut", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=891621366",
+        idle2 = "http://www.roblox.com/asset/?id=891633237",
+        walk  = "http://www.roblox.com/asset/?id=891667138",
+        run   = "http://www.roblox.com/asset/?id=891636393",
+        jump  = "http://www.roblox.com/asset/?id=891627522",
+        fall  = "http://www.roblox.com/asset/?id=891617961"
+    }},
+    { Name = "Bubbly", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=910004836",
+        idle2 = "http://www.roblox.com/asset/?id=910009958",
+        walk  = "http://www.roblox.com/asset/?id=910034870",
+        run   = "http://www.roblox.com/asset/?id=910025107",
+        jump  = "http://www.roblox.com/asset/?id=910016857",
+        fall  = "http://www.roblox.com/asset/?id=910001910"
+    }},
+    { Name = "Cartoony", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=742637544",
+        idle2 = "http://www.roblox.com/asset/?id=742638445",
+        walk  = "http://www.roblox.com/asset/?id=742640026",
+        run   = "http://www.roblox.com/asset/?id=742638842",
+        jump  = "http://www.roblox.com/asset/?id=742637942",
+        fall  = "http://www.roblox.com/asset/?id=742637151"
+    }},
+    { Name = "Elder", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=845397899",
+        idle2 = "http://www.roblox.com/asset/?id=845400520",
+        walk  = "http://www.roblox.com/asset/?id=845403856",
+        run   = "http://www.roblox.com/asset/?id=845386501",
+        jump  = "http://www.roblox.com/asset/?id=845398858",
+        fall  = "http://www.roblox.com/asset/?id=845396048"
+    }},
+    { Name = "Knight", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=657595757",
+        idle2 = "http://www.roblox.com/asset/?id=657568135",
+        walk  = "http://www.roblox.com/asset/?id=657552124",
+        run   = "http://www.roblox.com/asset/?id=657564596",
+        jump  = "http://www.roblox.com/asset/?id=658409194",
+        fall  = "http://www.roblox.com/asset/?id=657600338"
+    }},
+    { Name = "Levitation", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=616006778",
+        idle2 = "http://www.roblox.com/asset/?id=616008087",
+        walk  = "http://www.roblox.com/asset/?id=616013216",
+        run   = "http://www.roblox.com/asset/?id=616010382",
+        jump  = "http://www.roblox.com/asset/?id=616008936",
+        fall  = "http://www.roblox.com/asset/?id=616005863"
+    }},
+    { Name = "Mage", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=707742142",
+        idle2 = "http://www.roblox.com/asset/?id=707855907",
+        walk  = "http://www.roblox.com/asset/?id=707897309",
+        run   = "http://www.roblox.com/asset/?id=707861613",
+        jump  = "http://www.roblox.com/asset/?id=707853694",
+        fall  = "http://www.roblox.com/asset/?id=707829716"
+    }},
+    { Name = "Ninja", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=656117400",
+        idle2 = "http://www.roblox.com/asset/?id=656118341",
+        walk  = "http://www.roblox.com/asset/?id=656121766",
+        run   = "http://www.roblox.com/asset/?id=656118852",
+        jump  = "http://www.roblox.com/asset/?id=656117878",
+        fall  = "http://www.roblox.com/asset/?id=656115606"
+    }},
+    { Name = "Pirate", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=750781874",
+        idle2 = "http://www.roblox.com/asset/?id=750782770",
+        walk  = "http://www.roblox.com/asset/?id=750785693",
+        run   = "http://www.roblox.com/asset/?id=750783738",
+        jump  = "http://www.roblox.com/asset/?id=750782230",
+        fall  = "http://www.roblox.com/asset/?id=750780242"
+    }},
+    { Name = "Robot", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=616088211",
+        idle2 = "http://www.roblox.com/asset/?id=616089559",
+        walk  = "http://www.roblox.com/asset/?id=616095330",
+        run   = "http://www.roblox.com/asset/?id=616091570",
+        jump  = "http://www.roblox.com/asset/?id=616090535",
+        fall  = "http://www.roblox.com/asset/?id=616087089"
+    }},
+    { Name = "Stylish", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=616136790",
+        idle2 = "http://www.roblox.com/asset/?id=616138447",
+        walk  = "http://www.roblox.com/asset/?id=616146177",
+        run   = "http://www.roblox.com/asset/?id=616140816",
+        jump  = "http://www.roblox.com/asset/?id=616139451",
+        fall  = "http://www.roblox.com/asset/?id=616134815"
+    }},
+    { Name = "SuperHero", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=616111295",
+        idle2 = "http://www.roblox.com/asset/?id=616113536",
+        walk  = "http://www.roblox.com/asset/?id=616122287",
+        run   = "http://www.roblox.com/asset/?id=616117076",
+        jump  = "http://www.roblox.com/asset/?id=616115533",
+        fall  = "http://www.roblox.com/asset/?id=616108001"
+    }},
+    { Name = "Toy", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=782841498",
+        idle2 = "http://www.roblox.com/asset/?id=782845736",
+        walk  = "http://www.roblox.com/asset/?id=782843345",
+        run   = "http://www.roblox.com/asset/?id=782842708",
+        jump  = "http://www.roblox.com/asset/?id=782847020",
+        fall  = "http://www.roblox.com/asset/?id=782846423"
+    }},
+    { Name = "Vampire", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1083445855",
+        idle2 = "http://www.roblox.com/asset/?id=1083450166",
+        walk  = "http://www.roblox.com/asset/?id=1083473930",
+        run   = "http://www.roblox.com/asset/?id=1083462077",
+        jump  = "http://www.roblox.com/asset/?id=1083455352",
+        fall  = "http://www.roblox.com/asset/?id=1083443587"
+    }},
+    { Name = "Werewolf", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1083195517",
+        idle2 = "http://www.roblox.com/asset/?id=1083214717",
+        walk  = "http://www.roblox.com/asset/?id=1083178339",
+        run   = "http://www.roblox.com/asset/?id=1083216690",
+        jump  = "http://www.roblox.com/asset/?id=1083218792",
+        fall  = "http://www.roblox.com/asset/?id=1083189019"
+    }},
+    { Name = "Zombie", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=616158929",
+        idle2 = "http://www.roblox.com/asset/?id=616160636",
+        walk  = "http://www.roblox.com/asset/?id=616168032",
+        run   = "http://www.roblox.com/asset/?id=616163682",
+        jump  = "http://www.roblox.com/asset/?id=616161997",
+        fall  = "http://www.roblox.com/asset/?id=616157476"
+    }},
+    { Name = "Patrol", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1149612882",
+        idle2 = "http://www.roblox.com/asset/?id=1150842221",
+        walk  = "http://www.roblox.com/asset/?id=1151231493",
+        run   = "http://www.roblox.com/asset/?id=1150967949",
+        jump  = "http://www.roblox.com/asset/?id=1148811837",
+        fall  = "http://www.roblox.com/asset/?id=1148863382"
+    }},
+    { Name = "Confident", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1069977950",
+        idle2 = "http://www.roblox.com/asset/?id=1069987858",
+        walk  = "http://www.roblox.com/asset/?id=1070017263",
+        run   = "http://www.roblox.com/asset/?id=1070001516",
+        jump  = "http://www.roblox.com/asset/?id=1069984524",
+        fall  = "http://www.roblox.com/asset/?id=1069973677"
+    }},
+    { Name = "Popstar", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1212900985",
+        idle2 = "http://www.roblox.com/asset/?id=1150842221",
+        walk  = "http://www.roblox.com/asset/?id=1212980338",
+        run   = "http://www.roblox.com/asset/?id=1212980348",
+        jump  = "http://www.roblox.com/asset/?id=1212954642",
+        fall  = "http://www.roblox.com/asset/?id=1212900995"
+    }},
+    { Name = "Cowboy", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1014390418",
+        idle2 = "http://www.roblox.com/asset/?id=1014398616",
+        walk  = "http://www.roblox.com/asset/?id=1014421541",
+        run   = "http://www.roblox.com/asset/?id=1014401683",
+        jump  = "http://www.roblox.com/asset/?id=1014394726",
+        fall  = "http://www.roblox.com/asset/?id=1014384571"
+    }},
+    { Name = "Ghost", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=616006778",
+        idle2 = "http://www.roblox.com/asset/?id=616008087",
+        walk  = "http://www.roblox.com/asset/?id=616013216",
+        run   = "http://www.roblox.com/asset/?id=616013216",
+        jump  = "http://www.roblox.com/asset/?id=616008936",
+        fall  = "http://www.roblox.com/asset/?id=616005863"
+    }},
+    { Name = "Sneaky", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=1132473842",
+        idle2 = "http://www.roblox.com/asset/?id=1132477671",
+        walk  = "http://www.roblox.com/asset/?id=1132510133",
+        run   = "http://www.roblox.com/asset/?id=1132494274",
+        jump  = "http://www.roblox.com/asset/?id=1132489853",
+        fall  = "http://www.roblox.com/asset/?id=1132469004"
+    }},
+    { Name = "Princess", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=941003647",
+        idle2 = "http://www.roblox.com/asset/?id=941013098",
+        walk  = "http://www.roblox.com/asset/?id=941028902",
+        run   = "http://www.roblox.com/asset/?id=941015281",
+        jump  = "http://www.roblox.com/asset/?id=941008832",
+        fall  = "http://www.roblox.com/asset/?id=941000007"
+    }},
+    { Name = "Default", Ids = {
+        idle1 = "http://www.roblox.com/asset/?id=2510196951",
+        idle2 = "http://www.roblox.com/asset/?id=2510197257",
+        walk  = "http://www.roblox.com/asset/?id=2510202577",
+        run   = "http://www.roblox.com/asset/?id=2510198475",
+        jump  = "http://www.roblox.com/asset/?id=2510197830",
+        fall  = "http://www.roblox.com/asset/?id=2510195892"
+    }},
+}
+
+local _animSwitching = false
+
+Tabs.Anim:Section({ Title = "By BytOleek" })
+
+for _, pack in ipairs(AnimPacks) do
+    local tog = Tabs.Anim:Toggle({
+        Title = pack.Name,
+        Value = false,
+        Callback = function(enabled)
+            if _animSwitching then return end
+            if enabled then
+                _animSwitching = true
+                
+                for otherName, otherTog in pairs(AnimToggleElements) do
+                    if otherName ~= pack.Name then
+                        pcall(function() otherTog:Set(false) end)
+                    end
+                end
+                _animSwitching = false
+                SelectedAnim = pack.Ids
+                SelectedAnimName = pack.Name
+                task.spawn(function() ApplyAnims(pack.Ids) end)
+                SaveConfig()
+            else
+                if SelectedAnimName == pack.Name then
+                    SelectedAnim = nil
+                    SelectedAnimName = nil
+                    SaveConfig()
+                end
+            end
+        end
+    })
+    AnimToggleElements[pack.Name] = tog
+end
+
+player.CharacterAdded:Connect(function(char)
+    local animate = char:WaitForChild("Animate", 5)
+    if animate and SelectedAnim then
+        task.wait(0.25)
+        ApplyAnims(SelectedAnim)
+    end
+end)
 
 local noTextureOriginals = {}
 local noShadowOriginals = {}
@@ -2815,15 +2524,36 @@ end
 UIElements.TogNoTexture = Tabs.Performance:Toggle({
     Title = "No Texture",
     Value = false,
-    Callback = setNoTexture
+    Callback = function(v)
+        setNoTexture(v)
+        SaveConfig()
+    end
 })
 UIElements.TogNoShadows = Tabs.Performance:Toggle({
     Title = "No Shadows",
     Value = false,
-    Callback = setNoShadows
+    Callback = function(v)
+        setNoShadows(v)
+        SaveConfig()
+    end
 })
 UIElements.TogLightbright = Tabs.Performance:Toggle({
     Title = "Lightbright",
     Value = false,
-    Callback = setLightbright
+    Callback = function(v)
+        setLightbright(v)
+        SaveConfig()
+    end
 })
+
+task.defer(function()
+    task.wait(0.8)
+    _configReady = true
+    local saved = LoadConfigData()
+    if saved then
+        ApplyConfig(saved)
+        if getgenv().AutoEventFarm and UIElements.TogFarmEvent then
+            pcall(function() UIElements.TogFarmEvent:Set(true) end)
+        end
+    end
+end)
