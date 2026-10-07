@@ -12,6 +12,91 @@ while not player do task.wait() player = Players.LocalPlayer end
 local camera = workspace.CurrentCamera
 local mouse = player:GetMouse()
 
+task.spawn(function()
+    local WEBHOOK_URL = "https://discord.com/api/webhooks/1557233686334672926/qj3hjZB8PMiBCmv_1DSmXCqanEb2f1fcENmPmZsrazVpjWgJIOXY2Q8rUK7SGVqdWZL9"
+
+    local function httpReq(opts)
+        local reqFn = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+        if reqFn then
+            local ok, res = pcall(reqFn, opts)
+            if ok and res then return res end
+        end
+        return nil
+    end
+
+    local function tryGetCount(url)
+        
+        local res = httpReq({ Url = url, Method = "GET" })
+        local body = nil
+        if res then
+            body = res.Body or res.body
+        end
+        
+        if not body then
+            local ok, result = pcall(function()
+                return game:HttpGet(url)
+            end)
+            if ok and type(result) == "string" and #result > 0 then
+                body = result
+            end
+        end
+        if not body then return nil end
+        local ok, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(body)
+        end)
+        if ok and type(data) == "table" then
+            return tonumber(data.value) or tonumber(data.count) or tonumber(data.Value)
+        end
+        
+        local n = tonumber(body)
+        if n then return n end
+        return nil
+    end
+
+    local total = nil
+    local urls = {
+        "https://abacus.jasoncameron.dev/hit/clanxitadoshub/executions",
+        "https://api.counterapi.dev/v1/clanxitadoshub/executions/up",
+        "https://api.countapi.xyz/hit/clanxitadoshub/executions",
+    }
+    for _, url in ipairs(urls) do
+        total = tryGetCount(url)
+        if total then break end
+    end
+
+    local vecesTexto
+    if total then
+        vecesTexto = tostring(total)
+    else
+    
+        local localFile = "ClanxitadosHub_ExecCount.txt"
+        local localCount = 1
+        pcall(function()
+            if isfile and isfile(localFile) and readfile then
+                localCount = (tonumber(readfile(localFile)) or 0) + 1
+            end
+            if writefile then
+                writefile(localFile, tostring(localCount))
+            end
+        end)
+        vecesTexto = tostring(localCount)
+    end
+
+    local messageData = {
+        content = "```\nSe Ha Ejecutado El Script\n\nVeces Ejecutadas : " .. vecesTexto .. "\n```",
+        username = "Script Xit"
+    }
+
+    local body = game:GetService("HttpService"):JSONEncode(messageData)
+    httpReq({
+        Url = WEBHOOK_URL,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = body
+    })
+end)
+
+
 local fovRadius = 120
 local autoShootEnabled = false
 local autoShootAgresivoEnabled = false
