@@ -125,144 +125,6 @@ local camlockEnabled = false
 local camlockGunOnly = false
 local camlockKnifeOnly = false
 
-local CONFIG_FILE = "ClanxitadosHub_Config.json"
-local _configReady = false
-
-local function colorToTable(c)
-    if typeof(c) ~= "Color3" then return {255, 0, 0} end
-    return { math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5) }
-end
-
-local function tableToColor(t)
-    if type(t) ~= "table" then return Color3.fromRGB(255, 0, 0) end
-    return Color3.fromRGB(tonumber(t[1]) or 255, tonumber(t[2]) or 0, tonumber(t[3]) or 0)
-end
-
-local function SaveConfig()
-    if not _configReady then return end
-    if not writefile then return end
-    local data = {
-        autoShootEnabled = autoShootEnabled,
-        autoShootAgresivoEnabled = autoShootAgresivoEnabled,
-        autoShootTargetPart = autoShootTargetPart,
-        equipGunEnabled = equipGunEnabled,
-        silentAimManualEnabled = silentAimManualEnabled,
-        silentAimFovEnabled = silentAimFovEnabled,
-        silentAimTargetPart = silentAimTargetPart,
-        fovRadius = fovRadius,
-        hitboxEnabled = hitboxEnabled,
-        hitboxInvisible = hitboxInvisible,
-        hitboxSize = hitboxSize,
-        hitboxColor = colorToTable(hitboxColor),
-        espEnabled = espEnabled,
-        espColor = colorToTable(espColor),
-        espLineEnabled = espLineEnabled,
-        espLineColor = colorToTable(espLineColor),
-        espNameEnabled = espNameEnabled,
-        espNameColor = colorToTable(espNameColor),
-        triggerEnabled = getgenv().TriggerEnabled == true,
-        autoEventFarm = getgenv().AutoEventFarm == true,
-        noTexture = NoTextureEnabled == true,
-        noShadows = NoShadowsEnabled == true,
-        lightbright = LightbrightEnabled == true,
-        invisibleMenu = (invisibleButton and invisibleButton.Visible) == true,
-        selectedAnimName = SelectedAnimName,
-        camlockEnabled = camlockEnabled == true,
-        camlockGunOnly = camlockGunOnly == true,
-        camlockKnifeOnly = camlockKnifeOnly == true,
-    }
-    pcall(function()
-        writefile(CONFIG_FILE, HttpService:JSONEncode(data))
-    end)
-end
-
-local function LoadConfigData()
-    if not (isfile and readfile) then return nil end
-    local ok, raw = pcall(function()
-        if isfile(CONFIG_FILE) then return readfile(CONFIG_FILE) end
-        return nil
-    end)
-    if not ok or not raw or raw == "" then return nil end
-    local ok2, data = pcall(function() return HttpService:JSONDecode(raw) end)
-    if ok2 and type(data) == "table" then return data end
-    return nil
-end
-
-local function ApplyConfig(data)
-    if not data then return end
-
-    if data.autoShootEnabled ~= nil then autoShootEnabled = data.autoShootEnabled == true end
-    if data.autoShootAgresivoEnabled ~= nil then autoShootAgresivoEnabled = data.autoShootAgresivoEnabled == true end
-    if data.autoShootTargetPart then autoShootTargetPart = tostring(data.autoShootTargetPart) end
-    if data.equipGunEnabled ~= nil then equipGunEnabled = data.equipGunEnabled == true end
-    if data.silentAimManualEnabled ~= nil then silentAimManualEnabled = data.silentAimManualEnabled == true end
-    if data.silentAimFovEnabled ~= nil then silentAimFovEnabled = data.silentAimFovEnabled == true end
-    if data.silentAimTargetPart then silentAimTargetPart = tostring(data.silentAimTargetPart) end
-    if data.fovRadius then fovRadius = tonumber(data.fovRadius) or fovRadius end
-    if data.hitboxEnabled ~= nil then hitboxEnabled = data.hitboxEnabled == true end
-    if data.hitboxInvisible ~= nil then hitboxInvisible = data.hitboxInvisible == true end
-    if data.hitboxSize then hitboxSize = tonumber(data.hitboxSize) or hitboxSize end
-    if data.hitboxColor then hitboxColor = tableToColor(data.hitboxColor) end
-    if data.espEnabled ~= nil then espEnabled = data.espEnabled == true end
-    if data.espColor then espColor = tableToColor(data.espColor) end
-    if data.espLineEnabled ~= nil then espLineEnabled = data.espLineEnabled == true end
-    if data.espLineColor then espLineColor = tableToColor(data.espLineColor) end
-    if data.espNameEnabled ~= nil then espNameEnabled = data.espNameEnabled == true end
-    if data.espNameColor then espNameColor = tableToColor(data.espNameColor) end
-    if data.triggerEnabled ~= nil then getgenv().TriggerEnabled = data.triggerEnabled == true end
-    if data.autoEventFarm ~= nil then getgenv().AutoEventFarm = data.autoEventFarm == true end
-    if data.invisibleMenu ~= nil then invisibleEnabled = data.invisibleMenu == true end
-
-    -- Sync UI elements if they exist
-    local function safeSet(el, val)
-        if el then pcall(function() el:Set(val) end) end
-    end
-
-    safeSet(UIElements.TogAutoShoot, autoShootEnabled)
-    safeSet(UIElements.TogAutoShootAgr, autoShootAgresivoEnabled)
-    safeSet(UIElements.DropAutoShootPart, autoShootTargetPart)
-    safeSet(UIElements.TogEquipGun, equipGunEnabled)
-    safeSet(UIElements.TogTriggerbot, getgenv().TriggerEnabled == true)
-    safeSet(UIElements.TogSilentAimManual, silentAimManualEnabled)
-    safeSet(UIElements.DropSilentAimPart, silentAimTargetPart)
-    safeSet(UIElements.TogSilentAimFOV, silentAimFovEnabled)
-    safeSet(UIElements.SliFOVSize, fovRadius)
-    safeSet(UIElements.TogHitbox, hitboxEnabled)
-    safeSet(UIElements.TogHitboxInvisible, hitboxInvisible)
-    safeSet(UIElements.SliHitboxSize, hitboxSize)
-    safeSet(UIElements.TogEsp, espEnabled)
-    safeSet(UIElements.TogEspLine, espLineEnabled)
-    safeSet(UIElements.TogEspName, espNameEnabled)
-    safeSet(UIElements.TogInvisible, invisibleEnabled)
-
-    if invisibleEnabled then
-        invisibleButton.Visible = true
-        updateInvisibleButton()
-    end
-
-    -- Restaurar animación seleccionada
-    if data.selectedAnimName and AnimToggleElements and AnimToggleElements[data.selectedAnimName] then
-        pcall(function() AnimToggleElements[data.selectedAnimName]:Set(true) end)
-    end
-
-    if data.camlockEnabled ~= nil then camlockEnabled = data.camlockEnabled == true end
-    if data.camlockGunOnly ~= nil then camlockGunOnly = data.camlockGunOnly == true end
-    if data.camlockKnifeOnly ~= nil then camlockKnifeOnly = data.camlockKnifeOnly == true end
-    safeSet(UIElements.TogCamlock, camlockEnabled)
-    safeSet(UIElements.TogCamlockGunOnly, camlockGunOnly)
-    safeSet(UIElements.TogCamlockKnifeOnly, camlockKnifeOnly)
-
-    -- Performance (applied via their setter functions if available later)
-    if data.noTexture and setNoTexture then pcall(function() setNoTexture(true) end); safeSet(UIElements.TogNoTexture, true) end
-    if data.noShadows and setNoShadows then pcall(function() setNoShadows(true) end); safeSet(UIElements.TogNoShadows, true) end
-    if data.lightbright and setLightbright then pcall(function() setLightbright(true) end); safeSet(UIElements.TogLightbright, true) end
-
-    -- Auto Event Farm restart if needed
-    if getgenv().AutoEventFarm then
-        -- the toggle callback starts the loop; just ensure flag is set
-    end
-end
-
 local UIElements = {}
 local NotificationsEnabled = false
 
@@ -306,7 +168,6 @@ local function makeDraggable(guiObject, objectToMove, callback)
     end)
 end
 
--- ========== INVISIBLE (lógica de invis.txt) ==========
 local invisibleEnabled = false
 local isInvisible = false
 local character, humanoid, rootPart
@@ -1218,7 +1079,6 @@ UIElements.TogAutoShoot = Tabs.Aim:Toggle({
     Callback = function(Value)
         autoShootEnabled = Value
         if not Value and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
-        SaveConfig()
     end
 })
 
@@ -1227,7 +1087,6 @@ UIElements.TogAutoShootAgr = Tabs.Aim:Toggle({
     Callback = function(Value)
         autoShootAgresivoEnabled = Value
         if not Value and not autoShootEnabled then getgenv().ClanxitadosTargetPart = nil end
-        SaveConfig()
     end
 })
 
@@ -1237,7 +1096,6 @@ UIElements.DropAutoShootPart = Tabs.Aim:Dropdown({
     Value = "Torso",
     Callback = function(Value)
         autoShootTargetPart = Value
-        SaveConfig()
     end
 })
 
@@ -1246,7 +1104,6 @@ UIElements.TogEquipGun = Tabs.Aim:Toggle({
     Value = false,
     Callback = function(Value)
         equipGunEnabled = Value
-        SaveConfig()
     end
 })
 
@@ -1328,7 +1185,6 @@ UIElements.TogTriggerbot = Tabs.Aim:Toggle({
     Value = false,
     Callback = function(enabled)
         getgenv().TriggerEnabled = enabled
-        SaveConfig()
     end
 })
 
@@ -1445,7 +1301,6 @@ UIElements.TogCamlock = Tabs.Aim:Toggle({
         if not camlockEnabled then
             camlockTarget = nil
         end
-        SaveConfig()
     end
 })
 
@@ -1460,7 +1315,6 @@ UIElements.TogCamlockGunOnly = Tabs.Aim:Toggle({
                 pcall(function() UIElements.TogCamlockKnifeOnly:Set(false) end)
             end
         end
-        SaveConfig()
     end
 })
 
@@ -1475,7 +1329,6 @@ UIElements.TogCamlockKnifeOnly = Tabs.Aim:Toggle({
                 pcall(function() UIElements.TogCamlockGunOnly:Set(false) end)
             end
         end
-        SaveConfig()
     end
 })
 
@@ -1525,7 +1378,6 @@ UIElements.TogSilentAimManual = Tabs.Aim:Toggle({
     Callback = function(Value)
         silentAimManualEnabled = Value
         if not Value and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
-        SaveConfig()
     end
 })
 
@@ -1535,7 +1387,6 @@ UIElements.DropSilentAimPart = Tabs.Aim:Dropdown({
     Value = "Torso",
     Callback = function(Value)
         silentAimTargetPart = Value
-        SaveConfig()
     end
 })
 
@@ -1544,7 +1395,6 @@ UIElements.TogSilentAimFOV = Tabs.Aim:Toggle({
     Callback = function(Value)
         silentAimFovEnabled = Value
         if not Value and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
-        SaveConfig()
     end
 })
 
@@ -1554,7 +1404,6 @@ UIElements.SliFOVSize = Tabs.Aim:Slider({
     Value = { Min = 10, Max = 800, Default = 120 },
     Callback = function(v)
         fovRadius = v
-        SaveConfig()
     end
 })
 
@@ -1565,7 +1414,6 @@ UIElements.TogHitbox = Tabs.Aim:Toggle({
     Callback = function(Value)
         hitboxEnabled = Value
         if not Value then limpiarHitboxes() end
-        SaveConfig()
     end
 })
 
@@ -1574,7 +1422,6 @@ UIElements.TogHitboxInvisible = Tabs.Aim:Toggle({
     Value = false,
     Callback = function(Value)
         hitboxInvisible = Value
-        SaveConfig()
     end
 })
 
@@ -1584,7 +1431,6 @@ UIElements.SliHitboxSize = Tabs.Aim:Slider({
     Value = { Min = 1.0, Max = 30.0, Default = 5 },
     Callback = function(v)
         hitboxSize = v
-        SaveConfig()
     end
 })
 
@@ -1593,7 +1439,6 @@ Tabs.Aim:Colorpicker({
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(c)
         hitboxColor = c
-        SaveConfig()
     end
 })
 
@@ -1795,8 +1640,6 @@ task.spawn(function()
     end
 end)
 
-Tabs.KillAll:Section({ Title = "Menu Auto Kill" })
-
 UIElements.BtnMenuAutoKill = Tabs.KillAll:Button({
     Title = "Menu Auto Kill",
     Callback = function()
@@ -1806,7 +1649,14 @@ UIElements.BtnMenuAutoKill = Tabs.KillAll:Button({
     end
 })
 
-Tabs.KillAll:Section({ Title = "Invisible" })
+UIElements.BtnPlataforma = Tabs.KillAll:Button({
+    Title = "Menu Plataforma",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/xitados/free/refs/heads/main/plataforma"))()
+        end)
+    end
+})
 
 UIElements.TogInvisible = Tabs.KillAll:Toggle({
     Title = "Invisible",
@@ -1818,7 +1668,709 @@ UIElements.TogInvisible = Tabs.KillAll:Toggle({
         else
             updateInvisibleButton()
         end
-        SaveConfig()
+    end
+})
+
+local function startVisualFreezeEffect()
+    local FREEZE_SOUND_ID = "rbxassetid://6092902279"
+    local SOUND_VOLUME = 1
+    local FREEZE_COLOR = Color3.fromRGB(135, 206, 250)
+    local BODY_MATERIAL = Enum.Material.SmoothPlastic
+    local INCLUDE_NPCS = true
+    local PLAYER_FREEZE_TIME = 0
+    local NPC_FREEZE_TIME = 10
+    local POSE_LAG = 0.1
+    local SAMPLE_RANGE = 600
+    local CAUSE_WINDOW = 1.5
+    local AIM_ANGLE = 8
+    local AIM_RADIUS = 6
+    local AIM_MAX_DIST = 400
+    local MELEE_RANGE = 12
+    local STAT_WINDOW = 2
+    local STAT_WINDOW_UNAIMED = 0.8
+    local INSTANT_ON_AIM = true
+    local INSTANT_WINDOW = 0.6
+    local ATTACK_KEYS = {}
+    local DEBUG = false
+    local SoundService = game:GetService("SoundService")
+    local ContentProvider = game:GetService("ContentProvider")
+    local LocalPlayer = player
+
+    local function weak() return setmetatable({}, {__mode = "k"}) end
+    local freezeOn = true
+    local closed = false
+    local connections = {}
+    local humanoids = {}
+    local hooked = weak()
+    local handled = weak()
+    local lastTag = weak()
+    local rings = weak()
+    local partsOf = weak()
+    local dirty = weak()
+    local frozen = {}
+    local active = {}
+    local attacks = {}
+    local pending = {}
+    local statEvents = {}
+    local statValues = {}
+    local attrWatched = {}
+    local clearAll
+
+    local function track(c)
+        table.insert(connections, c)
+        return c
+    end
+
+    local env = (type(getgenv) == "function" and getgenv()) or _G
+    if type(env.__FreezeKillStop) == "function" then
+        pcall(env.__FreezeKillStop)
+    end
+
+    local function shutdown()
+        if closed then return end
+        closed = true
+        freezeOn = false
+        if clearAll then pcall(clearAll) end
+        for _, c in ipairs(connections) do
+            pcall(function() c:Disconnect() end)
+        end
+        table.clear(connections)
+    end
+    env.__FreezeKillStop = shutdown
+
+    local initOk, initErr = pcall(function()
+        for _, id in ipairs({FREEZE_SOUND_ID}) do
+            if id ~= "" then
+                task.spawn(function()
+                    local s = Instance.new("Sound")
+                    s.SoundId = id
+                    pcall(function() ContentProvider:PreloadAsync({s}) end)
+                    s:Destroy()
+                end)
+            end
+        end
+
+        local function playSound(id)
+            if not id or id == "" then return end
+            local s = Instance.new("Sound")
+            s.SoundId = id
+            s.Volume = SOUND_VOLUME
+            s.Parent = SoundService
+            s:Play()
+            task.delay(10, function() s:Destroy() end)
+        end
+
+        local RING = 12
+        local function refreshParts(hum)
+            local model = hum.Parent
+            local list = {}
+            if model then
+                for _, d in ipairs(model:GetDescendants()) do
+                    if d:IsA("BasePart") then list[#list + 1] = d end
+                end
+            end
+            partsOf[hum] = list
+            dirty[hum] = nil
+        end
+
+        track(RunService.Heartbeat:Connect(function()
+            local now = tick()
+            local cam = workspace.CurrentCamera
+            local camPos = cam and cam.CFrame.Position
+            for hum in pairs(humanoids) do
+                if hum.Parent and hum.Health > 0 then
+                    local root = hum.RootPart
+                    if not (root and camPos and (root.Position - camPos).Magnitude > SAMPLE_RANGE) then
+                        if dirty[hum] or not partsOf[hum] then refreshParts(hum) end
+                        local list = partsOf[hum]
+                        local r = rings[hum]
+                        if not r then
+                            r = {i = 0, slots = {}}
+                            for k = 1, RING do r.slots[k] = {t = 0, cf = weak()} end
+                            rings[hum] = r
+                        end
+                        r.i = r.i % RING + 1
+                        local slot = r.slots[r.i]
+                        slot.t = now
+                        local cf = slot.cf
+                        for k = 1, #list do
+                            local p = list[k]
+                            cf[p] = p.CFrame
+                        end
+                    end
+                end
+            end
+        end))
+
+        local function getPose(hum, diedAt)
+            local r = rings[hum]
+            if not r then return nil end
+            local target = diedAt - POSE_LAG
+            local best, bestT
+            for _, s in ipairs(r.slots) do
+                if s.t > 0 and s.t <= target and (not bestT or s.t > bestT) then
+                    best, bestT = s, s.t
+                end
+            end
+            if not best then
+                for _, s in ipairs(r.slots) do
+                    if s.t > 0 and (not bestT or s.t < bestT) then best, bestT = s, s.t end
+                end
+            end
+            if not best or bestT < diedAt - 1.5 then return nil end
+            local copy = {}
+            for p, cf in pairs(best.cf) do copy[p] = cf end
+            return copy
+        end
+
+        local function paintModel(model, undo, color)
+            local function add(fn) undo[#undo + 1] = fn end
+            for _, d in ipairs(model:GetDescendants()) do
+                pcall(function()
+                    if d:IsA("BasePart") then
+                        local tr, col, mat, ref = d.Transparency, d.Color, d.Material, d.Reflectance
+                        local tex = d:IsA("MeshPart") and d.TextureID or nil
+                        if tr > 0 and tr < 1 then d.Transparency = 0 end
+                        d.Color = color
+                        d.Material = BODY_MATERIAL
+                        d.Reflectance = 0
+                        if tex ~= nil then d.TextureID = "" end
+                        add(function()
+                            d.Transparency = tr
+                            d.Color = col
+                            d.Material = mat
+                            d.Reflectance = ref
+                            if tex ~= nil then d.TextureID = tex end
+                        end)
+                    elseif d:IsA("SpecialMesh") then
+                        local tex, vc = d.TextureId, d.VertexColor
+                        d.TextureId = ""
+                        d.VertexColor = Vector3.new(1, 1, 1)
+                        add(function() d.TextureId = tex d.VertexColor = vc end)
+                    elseif d:IsA("Shirt") or d:IsA("Pants") or d:IsA("ShirtGraphic")
+                        or d:IsA("BodyColors") or d:IsA("SurfaceAppearance")
+                        or d:IsA("Decal") or d:IsA("Texture")
+                        or d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Beam")
+                        or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("Sparkles")
+                        or d:IsA("Highlight") then
+                        local parent = d.Parent
+                        d.Parent = nil
+                        add(function() d.Parent = parent end)
+                    end
+                end)
+            end
+        end
+
+        local function makeBackup(model)
+            local clone
+            pcall(function()
+                model.Archivable = true
+                clone = model:Clone()
+            end)
+            if not clone then return nil end
+            for _, d in ipairs(clone:GetDescendants()) do
+                if d:IsA("Humanoid") or d:IsA("Script") or d:IsA("LocalScript")
+                    or d:IsA("ModuleScript") or d:IsA("BillboardGui") or d:IsA("SurfaceGui")
+                    or d:IsA("Sound") or d:IsA("ForceField") or d:IsA("Animator") then
+                    d:Destroy()
+                end
+            end
+            for _, d in ipairs(clone:GetDescendants()) do
+                if d:IsA("BasePart") then
+                    d.Anchored = true
+                    d.CanCollide = false
+                    d.CanQuery = false
+                    d.CanTouch = false
+                end
+            end
+            clone.Name = "FrozenBody"
+            return clone
+        end
+
+        local byVictim = weak()
+        local function applyEffect(model, pose, hum, plr, opts)
+            if hum.Health > 0 or not model.Parent then return function() end end
+            local key = plr or model
+            local oldFx = byVictim[key]
+            if oldFx then pcall(oldFx) end
+            local rec = opts.freeze and {model = model, saved = {}} or nil
+            local undo = {}
+            local conns = {}
+            local done, backup = false, nil
+            local color = FREEZE_COLOR
+            if rec then
+                for _, d in ipairs(model:GetDescendants()) do
+                    if d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+                        pcall(function()
+                            if d.Enabled then
+                                d.Enabled = false
+                                undo[#undo + 1] = function() d.Enabled = true end
+                            end
+                        end)
+                    end
+                end
+                for _, d in ipairs(model:GetDescendants()) do
+                    if d:IsA("BasePart") then
+                        local cf = (pose and pose[d]) or d.CFrame
+                        rec.saved[d] = cf
+                        local was = d.Anchored
+                        d.Anchored = true
+                        d.AssemblyLinearVelocity = Vector3.zero
+                        d.AssemblyAngularVelocity = Vector3.zero
+                        d.CFrame = cf
+                        undo[#undo + 1] = function() d.Anchored = was end
+                    end
+                end
+            end
+            paintModel(model, undo, color)
+            if rec then active[rec] = true end
+            playSound(FREEZE_SOUND_ID)
+            local cleanup
+            cleanup = function()
+                if done then return end
+                done = true
+                if rec then active[rec] = nil end
+                if byVictim[key] == cleanup then byVictim[key] = nil end
+                for i = #frozen, 1, -1 do
+                    if frozen[i] == cleanup then table.remove(frozen, i) break end
+                end
+                for _, c in ipairs(conns) do pcall(function() c:Disconnect() end) end
+                if backup then backup:Destroy() end
+                for i = #undo, 1, -1 do pcall(undo[i]) end
+            end
+            if rec then
+                local function onGone()
+                    if done or backup then return end
+                    for part, cf in pairs(rec.saved) do
+                        if part.Parent then pcall(function() part.CFrame = cf end) end
+                    end
+                    backup = makeBackup(model)
+                    if backup then
+                        task.defer(function()
+                            if not done and backup then backup.Parent = workspace end
+                        end)
+                    end
+                end
+                table.insert(conns, model.Destroying:Connect(onGone))
+                table.insert(conns, model.AncestryChanged:Connect(function()
+                    if not model:IsDescendantOf(workspace) then onGone() end
+                end))
+            end
+            table.insert(conns, hum.HealthChanged:Connect(function(h)
+                if h > 0 then cleanup() end
+            end))
+            if plr then
+                table.insert(conns, plr.CharacterAdded:Connect(function(c)
+                    if c ~= model then cleanup() end
+                end))
+                table.insert(conns, plr.AncestryChanged:Connect(function()
+                    if not plr.Parent then cleanup() end
+                end))
+            end
+            local life = opts.freeze and (plr and PLAYER_FREEZE_TIME or NPC_FREEZE_TIME) or 0
+            if life > 0 then task.delay(life, cleanup) end
+            byVictim[key] = cleanup
+            table.insert(frozen, cleanup)
+            task.spawn(function()
+                while not done and not closed do
+                    task.wait(0.25)
+                    if done or closed then break end
+                    local respawned = false
+                    if plr then
+                        local ch = plr.Character
+                        if not plr.Parent then
+                            respawned = true
+                        elseif ch ~= nil and ch ~= model then
+                            respawned = true
+                        elseif hum.Parent and hum.Health > 0 then
+                            respawned = true
+                        end
+                    elseif hum.Parent and hum.Health > 0 then
+                        respawned = true
+                    end
+                    if respawned then
+                        cleanup()
+                        break
+                    end
+                end
+            end)
+            return cleanup
+        end
+
+        local function trigger(model, pose, hum, plr)
+            if not freezeOn then return function() end end
+            return applyEffect(model, pose, hum, plr, {freeze = true})
+        end
+
+        track(RunService.RenderStepped:Connect(function()
+            for rec in pairs(active) do
+                if rec.model.Parent then
+                    for part, cf in pairs(rec.saved) do
+                        if part.Parent and part.CFrame ~= cf then part.CFrame = cf end
+                    end
+                end
+            end
+        end))
+
+        function clearAll()
+            while #frozen > 0 do
+                local fn = table.remove(frozen)
+                pcall(fn)
+            end
+            for _, d in ipairs(pending) do d.resolved = true end
+            table.clear(pending)
+        end
+
+        local TAG_NAMES = {"creator", "Creator", "killer", "Killer",
+            "lastDamager", "LastDamager", "lastAttacker", "LastAttacker"}
+        local TAG_SET = {}
+        for _, n in ipairs(TAG_NAMES) do TAG_SET[n] = true end
+        local attackKeySet = {}
+        for _, k in ipairs(ATTACK_KEYS) do attackKeySet[k] = true end
+
+        local function matchesMe(v)
+            local t = typeof(v)
+            if t == "Instance" then
+                if v == LocalPlayer then return true end
+                local myChar = LocalPlayer.Character
+                return myChar ~= nil and (v == myChar or v:IsDescendantOf(myChar))
+            elseif t == "string" then
+                return v == LocalPlayer.Name or v == LocalPlayer.DisplayName
+                    or v == tostring(LocalPlayer.UserId)
+            elseif t == "number" then
+                return v == LocalPlayer.UserId
+            end
+            return false
+        end
+
+        local function readTag(hum)
+            local model = hum.Parent
+            for _, name in ipairs(TAG_NAMES) do
+                local obj = hum:FindFirstChild(name) or (model and model:FindFirstChild(name))
+                if obj and obj:IsA("ValueBase") then
+                    local v = obj.Value
+                    if v ~= nil and v ~= "" and v ~= 0 then return true, matchesMe(v) end
+                end
+                local a = hum:GetAttribute(name)
+                if a == nil and model then a = model:GetAttribute(name) end
+                if a ~= nil and a ~= "" and a ~= 0 then return true, matchesMe(a) end
+            end
+            return false, false
+        end
+
+        local function recordTag(hum)
+            local known, mine = readTag(hum)
+            if known then lastTag[hum] = {mine = mine, t = tick()} end
+        end
+
+        local function isKillStat(name)
+            name = name:lower()
+            if name:find("death") or name:find("assist") then return false end
+            return name:find("kill") ~= nil or name:find("elim") ~= nil
+                or name:find("frag") ~= nil or name:find("takedown") ~= nil
+                or name == "ko" or name == "kos"
+        end
+
+        local function hasStats()
+            return next(statValues) ~= nil or next(attrWatched) ~= nil
+        end
+
+        local resolveStats
+        local function addStatEvent(src, delta)
+            local t = tick()
+            for i = #statEvents, 1, -1 do
+                local e = statEvents[i]
+                if t - e.t <= 0.25 and not e.src[src] then
+                    e.src[src] = true
+                    return
+                end
+            end
+            statEvents[#statEvents + 1] = {t = t, n = delta, src = {[src] = true}}
+            resolveStats()
+        end
+
+        local function watchStat(v)
+            if statValues[v] then return end
+            if not (v:IsA("IntValue") or v:IsA("NumberValue")) or not isKillStat(v.Name) then return end
+            statValues[v] = true
+            local prev = v.Value
+            track(v.Changed:Connect(function(new)
+                if new > prev then addStatEvent(v, math.max(1, math.floor(new - prev + 0.5))) end
+                prev = new
+            end))
+        end
+
+        local function watchAttr(name)
+            if attrWatched[name] or type(name) ~= "string" or not isKillStat(name) then return end
+            local val = LocalPlayer:GetAttribute(name)
+            if type(val) ~= "number" then return end
+            attrWatched[name] = true
+            local prev = val
+            track(LocalPlayer:GetAttributeChangedSignal(name):Connect(function()
+                local new = LocalPlayer:GetAttribute(name)
+                if type(new) ~= "number" then return end
+                if new > prev then addStatEvent(name, math.max(1, math.floor(new - prev + 0.5))) end
+                prev = new
+            end))
+        end
+
+        local function scanStats()
+            local ls = LocalPlayer:FindFirstChild("leaderstats")
+            if ls then
+                for _, v in ipairs(ls:GetDescendants()) do watchStat(v) end
+            end
+            for name in pairs(LocalPlayer:GetAttributes()) do watchAttr(name) end
+        end
+
+        local function markShot(pos)
+            local cam = workspace.CurrentCamera
+            if not cam then return end
+            local t0 = tick()
+            local lastA = attacks[#attacks]
+            if lastA and t0 - lastA.t < 0.03 then return end
+            local myChar = LocalPlayer.Character
+            local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            local aimDirs = {cam.CFrame.LookVector}
+            if pos then
+                table.insert(aimDirs, cam:ScreenPointToRay(pos.X, pos.Y).Direction)
+            else
+                local m = UserInputService:GetMouseLocation()
+                table.insert(aimDirs, cam:ViewportPointToRay(m.X, m.Y).Direction)
+            end
+            local origin = cam.CFrame.Position
+            local params = RaycastParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = myChar and {myChar} or {}
+            local cands = {}
+            for hum in pairs(humanoids) do
+                local model = hum.Parent
+                if model and model ~= myChar and hum.Health > 0 then
+                    local root = hum.RootPart or model:FindFirstChild("HumanoidRootPart")
+                        or model:FindFirstChildWhichIsA("BasePart")
+                    if root then
+                        local to = root.Position - origin
+                        local dist = to.Magnitude
+                        if dist > 0.1 and dist <= AIM_MAX_DIST then
+                            local dir = to.Unit
+                            local bestCos = -1
+                            for _, v in ipairs(aimDirs) do
+                                bestCos = math.max(bestCos, v:Dot(dir))
+                            end
+                            local tol = math.min(AIM_ANGLE, math.max(1.5, math.deg(math.atan2(AIM_RADIUS, dist))))
+                            local close = myRoot and (root.Position - myRoot.Position).Magnitude <= MELEE_RANGE
+                            if bestCos >= math.cos(math.rad(tol)) or close then
+                                local hit = workspace:Raycast(origin, to + dir * 2, params)
+                                if hit and hit.Instance:IsDescendantOf(model) then
+                                    cands[#cands + 1] = {model = model, cos = bestCos}
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            table.sort(cands, function(x, y) return x.cos > y.cos end)
+            local keep = {}
+            for i = 1, math.min(2, #cands) do keep[cands[i].model] = i end
+            attacks[#attacks + 1] = {t = t0, cands = keep}
+            if #attacks > 30 then table.remove(attacks, 1) end
+        end
+
+        local function causedByMe(model, diedAt)
+            local aimed, strong = false, false
+            for i = #attacks, 1, -1 do
+                local a = attacks[i]
+                if diedAt - a.t > CAUSE_WINDOW then break end
+                local rank = a.cands[model]
+                if rank then
+                    aimed = true
+                    if rank == 1 and diedAt - a.t <= INSTANT_WINDOW then strong = true end
+                end
+            end
+            return aimed, strong
+        end
+
+        local function confirmKill(d)
+            d.resolved = true
+            if not d.cancel then d.cancel = trigger(d.model, d.pose, d.hum, d.player) end
+        end
+
+        local function expire(d)
+            if d.resolved then return end
+            d.resolved = true
+            if d.cancel then d.cancel() end
+        end
+
+        function resolveStats()
+            local tNow = tick()
+            for i = #statEvents, 1, -1 do
+                local e = statEvents[i]
+                if e.n <= 0 or tNow - e.t > STAT_WINDOW * 2 then table.remove(statEvents, i) end
+            end
+            for i = #pending, 1, -1 do
+                local d = pending[i]
+                if d.resolved and tNow - d.t > 5 then table.remove(pending, i) end
+            end
+            while true do
+                local bestE, bestD, bestCost
+                for _, e in ipairs(statEvents) do
+                    if e.n > 0 then
+                        for _, d in ipairs(pending) do
+                            if not d.resolved then
+                                local dt = math.abs(e.t - d.t)
+                                local limit = d.aimed and STAT_WINDOW or STAT_WINDOW_UNAIMED
+                                if dt <= limit then
+                                    local cost = dt + (d.aimed and 0 or 1)
+                                    if not bestCost or cost < bestCost then
+                                        bestE, bestD, bestCost = e, d, cost
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                if not bestE then break end
+                bestE.n = bestE.n - 1
+                confirmKill(bestD)
+            end
+        end
+
+        local function onDied(hum, model)
+            if not freezeOn or handled[hum] then return end
+            handled[hum] = true
+            local plr = Players:GetPlayerFromCharacter(model)
+            if plr == LocalPlayer then return end
+            local diedAt = tick()
+            local pose = getPose(hum, diedAt)
+            local known, mine = readTag(hum)
+            if not known then
+                local lt = lastTag[hum]
+                if lt and diedAt - lt.t <= 15 then known, mine = true, lt.mine end
+            end
+            if known then
+                if mine then trigger(model, pose, hum, plr) end
+                return
+            end
+            scanStats()
+            local aimed, strong = causedByMe(model, diedAt)
+            if not hasStats() then
+                if aimed then trigger(model, pose, hum, plr) end
+                return
+            end
+            local d = {hum = hum, model = model, player = plr, pose = pose,
+                t = diedAt, aimed = aimed, label = model.Name, resolved = false}
+            pending[#pending + 1] = d
+            if INSTANT_ON_AIM and strong then
+                d.cancel = trigger(model, pose, hum, plr)
+            end
+            task.delay((aimed and STAT_WINDOW or STAT_WINDOW_UNAIMED) + 0.1, function() expire(d) end)
+            resolveStats()
+        end
+
+        local function hookHumanoid(hum)
+            if hooked[hum] then return end
+            local model = hum.Parent
+            if not model or not model:IsA("Model") then return end
+            if Players:GetPlayerFromCharacter(model) == LocalPlayer then return end
+            if not INCLUDE_NPCS and not Players:GetPlayerFromCharacter(model) then return end
+            hooked[hum] = true
+            humanoids[hum] = true
+            dirty[hum] = true
+            local function watchTagObj(c)
+                if TAG_SET[c.Name] and c:IsA("ValueBase") then
+                    recordTag(hum)
+                    track(c.Changed:Connect(function() recordTag(hum) end))
+                end
+            end
+            for _, c in ipairs(hum:GetChildren()) do watchTagObj(c) end
+            track(hum.ChildAdded:Connect(watchTagObj))
+            track(hum.AttributeChanged:Connect(function(n)
+                if TAG_SET[n] then recordTag(hum) end
+            end))
+            local lastHealth = hum.Health
+            track(hum.HealthChanged:Connect(function(h)
+                if h < lastHealth then recordTag(hum) end
+                if h > 0 then
+                    handled[hum] = nil
+                    if lastHealth <= 0 then lastTag[hum] = nil end
+                elseif lastHealth > 0 then
+                    onDied(hum, hum.Parent or model)
+                end
+                lastHealth = h
+            end))
+            track(hum.Died:Connect(function() onDied(hum, hum.Parent or model) end))
+            track(model.DescendantAdded:Connect(function(d)
+                if d:IsA("BasePart") then dirty[hum] = true end
+            end))
+            track(model.DescendantRemoving:Connect(function(d)
+                if d:IsA("BasePart") then dirty[hum] = true end
+            end))
+            track(hum.AncestryChanged:Connect(function()
+                if hum:IsDescendantOf(workspace) then
+                    humanoids[hum] = true
+                    dirty[hum] = true
+                else
+                    humanoids[hum] = nil
+                end
+            end))
+        end
+
+        for _, d in ipairs(workspace:GetDescendants()) do
+            if d:IsA("Humanoid") then hookHumanoid(d) end
+        end
+        track(workspace.DescendantAdded:Connect(function(d)
+            if d:IsA("Humanoid") then task.defer(hookHumanoid, d) end
+        end))
+
+        local function hookTool(t)
+            if t:IsA("Tool") then track(t.Activated:Connect(function() markShot() end)) end
+        end
+        local function hookMyChar(char)
+            for _, c in ipairs(char:GetChildren()) do hookTool(c) end
+            track(char.ChildAdded:Connect(hookTool))
+        end
+        if LocalPlayer.Character then hookMyChar(LocalPlayer.Character) end
+        track(LocalPlayer.CharacterAdded:Connect(hookMyChar))
+        track(UserInputService.InputBegan:Connect(function(input, gp)
+            local t = input.UserInputType
+            if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
+                local pos = Vector2.new(input.Position.X, input.Position.Y)
+                markShot(pos)
+            end
+            if input.KeyCode == Enum.KeyCode.ButtonR2 then
+                markShot()
+            elseif not gp and attackKeySet[input.KeyCode] then
+                markShot()
+            end
+        end))
+        scanStats()
+        track(LocalPlayer.ChildAdded:Connect(function(c)
+            if c.Name == "leaderstats" then
+                task.wait(0.5)
+                scanStats()
+                track(c.DescendantAdded:Connect(watchStat))
+            end
+        end))
+        track(LocalPlayer.AttributeChanged:Connect(watchAttr))
+    end)
+
+    if not initOk then
+        warn("[Freeze] ERROR: " .. tostring(initErr))
+    end
+end
+
+UIElements.TogVisualFreeze = Tabs.KillAll:Toggle({
+    Title = "Visual Freeze Efect",
+    Desc = "EQUIPA EL DEFAULT EFECT ANTES DE ACTIVARLO",
+    Value = false,
+    Callback = function(enabled)
+        if enabled then
+            pcall(startVisualFreezeEffect)
+        else
+            local env = (type(getgenv) == "function" and getgenv()) or _G
+            if type(env.__FreezeKillStop) == "function" then
+                pcall(env.__FreezeKillStop)
+            end
+        end
     end
 })
 
@@ -1887,7 +2439,6 @@ UIElements.TogEsp = Tabs.Vis:Toggle({
     Title = "ESP",
     Callback = function(s)
         espEnabled = s
-        SaveConfig()
     end
 })
 
@@ -1896,7 +2447,6 @@ UIElements.ColEsp = Tabs.Vis:Colorpicker({
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(c)
         espColor = c
-        SaveConfig()
     end
 })
 
@@ -1905,7 +2455,6 @@ UIElements.TogEspLine = Tabs.Vis:Toggle({
     Value = false,
     Callback = function(s)
         espLineEnabled = s
-        SaveConfig()
     end
 })
 
@@ -1914,7 +2463,6 @@ UIElements.ColEspLine = Tabs.Vis:Colorpicker({
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(c)
         espLineColor = c
-        SaveConfig()
     end
 })
 
@@ -1923,7 +2471,6 @@ UIElements.TogEspName = Tabs.Vis:Toggle({
     Value = false,
     Callback = function(s)
         espNameEnabled = s
-        SaveConfig()
     end
 })
 
@@ -1932,7 +2479,6 @@ UIElements.ColEspName = Tabs.Vis:Colorpicker({
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(c)
         espNameColor = c
-        SaveConfig()
     end
 })
 
@@ -2184,7 +2730,6 @@ UIElements.TogFarmEvent = Tabs.Farm:Toggle({
                 end
             end)
         end
-        SaveConfig()
     end
 })
 
@@ -2450,12 +2995,10 @@ for _, pack in ipairs(AnimPacks) do
                 SelectedAnim = pack.Ids
                 SelectedAnimName = pack.Name
                 task.spawn(function() ApplyAnims(pack.Ids) end)
-                SaveConfig()
             else
                 if SelectedAnimName == pack.Name then
                     SelectedAnim = nil
                     SelectedAnimName = nil
-                    SaveConfig()
                 end
             end
         end
@@ -2611,7 +3154,6 @@ UIElements.TogNoTexture = Tabs.Performance:Toggle({
     Value = false,
     Callback = function(v)
         setNoTexture(v)
-        SaveConfig()
     end
 })
 UIElements.TogNoShadows = Tabs.Performance:Toggle({
@@ -2619,7 +3161,6 @@ UIElements.TogNoShadows = Tabs.Performance:Toggle({
     Value = false,
     Callback = function(v)
         setNoShadows(v)
-        SaveConfig()
     end
 })
 UIElements.TogLightbright = Tabs.Performance:Toggle({
@@ -2627,18 +3168,5 @@ UIElements.TogLightbright = Tabs.Performance:Toggle({
     Value = false,
     Callback = function(v)
         setLightbright(v)
-        SaveConfig()
     end
 })
-
-task.defer(function()
-    task.wait(0.8)
-    _configReady = true
-    local saved = LoadConfigData()
-    if saved then
-        ApplyConfig(saved)
-        if getgenv().AutoEventFarm and UIElements.TogFarmEvent then
-            pcall(function() UIElements.TogFarmEvent:Set(true) end)
-        end
-    end
-end)
