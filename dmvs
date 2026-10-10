@@ -12,97 +12,10 @@ while not player do task.wait() player = Players.LocalPlayer end
 local camera = workspace.CurrentCamera
 local mouse = player:GetMouse()
 
-task.spawn(function()
-    local WEBHOOK_URL = "https://discord.com/api/webhooks/1557233686334672926/qj3hjZB8PMiBCmv_1DSmXCqanEb2f1fcENmPmZsrazVpjWgJIOXY2Q8rUK7SGVqdWZL9"
-
-    local function httpReq(opts)
-        local reqFn = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-        if reqFn then
-            local ok, res = pcall(reqFn, opts)
-            if ok and res then return res end
-        end
-        return nil
-    end
-
-    local function tryGetCount(url)
-        
-        local res = httpReq({ Url = url, Method = "GET" })
-        local body = nil
-        if res then
-            body = res.Body or res.body
-        end
-        
-        if not body then
-            local ok, result = pcall(function()
-                return game:HttpGet(url)
-            end)
-            if ok and type(result) == "string" and #result > 0 then
-                body = result
-            end
-        end
-        if not body then return nil end
-        local ok, data = pcall(function()
-            return game:GetService("HttpService"):JSONDecode(body)
-        end)
-        if ok and type(data) == "table" then
-            return tonumber(data.value) or tonumber(data.count) or tonumber(data.Value)
-        end
-        
-        local n = tonumber(body)
-        if n then return n end
-        return nil
-    end
-
-    local total = nil
-    local urls = {
-        "https://abacus.jasoncameron.dev/hit/clanxitadoshub/executions",
-        "https://api.counterapi.dev/v1/clanxitadoshub/executions/up",
-        "https://api.countapi.xyz/hit/clanxitadoshub/executions",
-    }
-    for _, url in ipairs(urls) do
-        total = tryGetCount(url)
-        if total then break end
-    end
-
-    local vecesTexto
-    if total then
-        vecesTexto = tostring(total)
-    else
-    
-        local localFile = "ClanxitadosHub_ExecCount.txt"
-        local localCount = 1
-        pcall(function()
-            if isfile and isfile(localFile) and readfile then
-                localCount = (tonumber(readfile(localFile)) or 0) + 1
-            end
-            if writefile then
-                writefile(localFile, tostring(localCount))
-            end
-        end)
-        vecesTexto = tostring(localCount)
-    end
-
-    local messageData = {
-        content = "```\nSe Ha Ejecutado El Script\n\nVeces Ejecutadas : " .. vecesTexto .. "\n```",
-        username = "Script Xit"
-    }
-
-    local body = game:GetService("HttpService"):JSONEncode(messageData)
-    httpReq({
-        Url = WEBHOOK_URL,
-        Method = "POST",
-        Headers = { ["Content-Type"] = "application/json" },
-        Body = body
-    })
-end)
-
-
-local fovRadius = 120
 local autoShootEnabled = false
 local autoShootAgresivoEnabled = false
 local autoShootTargetPart = "Torso"
 local silentAimManualEnabled = false
-local silentAimFovEnabled = false
 local silentAimTargetPart = "Torso"
 local teamCheckEnabled = true
 local espEnabled = false
@@ -247,7 +160,7 @@ local function startInvisibleHeartbeat()
             local realCFrame = rootPart.CFrame
             local oldOffset = humanoid.CameraOffset
 
-            local fakeCFrame = realCFrame * CFrame.new(0, 500, 0)
+            local fakeCFrame = realCFrame * CFrame.new(0, 200, 0)
             local offsetDifference = fakeCFrame:ToObjectSpace(CFrame.new(realCFrame.Position)).Position
 
             rootPart.CFrame = fakeCFrame
@@ -1215,6 +1128,71 @@ task.spawn(function()
     end
 end)
 
+Tabs.Aim:Section({ Title = "Macro" })
+
+local macroActiva = false
+local ejecutandoMacro = false
+
+local function obtenerPistolaSegura()
+    local char = player.Character
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    if char then
+        for _, item in ipairs(char:GetChildren()) do
+            if esPistola(item) then return item end
+        end
+    end
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if esPistola(item) then return item end
+        end
+    end
+    return nil
+end
+
+UIElements.TogMacro = Tabs.Aim:Toggle({
+    Title = "Macro",
+    Value = false,
+    Callback = function(enabled)
+        macroActiva = enabled == true
+    end
+})
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed or not macroActiva then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+    if ejecutandoMacro then return end
+    ejecutandoMacro = true
+
+    local character = player.Character
+    if not character then
+        ejecutandoMacro = false
+        return
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        ejecutandoMacro = false
+        return
+    end
+
+    local pistola = obtenerPistolaSegura()
+    if pistola then
+        pcall(function()
+            humanoid:EquipTool(pistola)
+        end)
+        task.wait(0.03)
+        pcall(function()
+            pistola:Activate()
+        end)
+        task.delay(0.08, function()
+            pcall(function()
+                humanoid:UnequipTools()
+            end)
+        end)
+    end
+
+    ejecutandoMacro = false
+end)
 
 local camlockTarget = nil
 local CAMLOCK_PREDICTION = 0.25
@@ -1390,22 +1368,7 @@ UIElements.DropSilentAimPart = Tabs.Aim:Dropdown({
     end
 })
 
-UIElements.TogSilentAimFOV = Tabs.Aim:Toggle({
-    Title = "Silent Aim With Fov",
-    Callback = function(Value)
-        silentAimFovEnabled = Value
-        if not Value and not silentAimManualEnabled and not autoShootEnabled and not autoShootAgresivoEnabled then getgenv().ClanxitadosTargetPart = nil end
-    end
-})
 
-UIElements.SliFOVSize = Tabs.Aim:Slider({
-    Title = "Fov Size",
-    Step = 1,
-    Value = { Min = 10, Max = 800, Default = 120 },
-    Callback = function(v)
-        fovRadius = v
-    end
-})
 
 Tabs.Aim:Section({ Title = "Hitbox" })
 UIElements.TogHitbox = Tabs.Aim:Toggle({
@@ -1577,7 +1540,7 @@ task.spawn(function()
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     while task.wait(0.1) do
-        if (silentAimManualEnabled or silentAimFovEnabled) and not estaEnLobby() then
+        if silentAimManualEnabled and not estaEnLobby() then
             local char = player.Character
             if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
             local closestTargetPart = nil
@@ -1607,22 +1570,11 @@ task.spawn(function()
                         params.FilterDescendantsInstances = { char, p.Character }
                         for _, part in ipairs(partesAEscanear) do
                             local distFisica = (part.Position - myPos).Magnitude
-                            local pos2D, onScreen = camera:WorldToViewportPoint(part.Position)
-                            local distToCenter = (Vector2.new(pos2D.X, pos2D.Y) - Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)).Magnitude
-                            local pasaFiltro = false
-                            if silentAimFovEnabled then
-                                if onScreen and distToCenter <= fovRadius and distToCenter < shortestDistToCenter then pasaFiltro = true end
-                            elseif silentAimManualEnabled then
-                                if distFisica < shortestDistanceFisica then pasaFiltro = true end
-                            end
-                            if pasaFiltro then
+                            if distFisica < shortestDistanceFisica then
                                 local raycastResult = workspace:Raycast(headPos, part.Position - headPos, params)
                                 if not raycastResult then
-                                    if silentAimFovEnabled then
-                                        shortestDistToCenter = distToCenter; closestTargetPart = part
-                                    else
-                                        shortestDistanceFisica = distFisica; closestTargetPart = part
-                                    end
+                                    shortestDistanceFisica = distFisica
+                                    closestTargetPart = part
                                 end
                             end
                         end
@@ -1641,7 +1593,7 @@ task.spawn(function()
 end)
 
 UIElements.BtnMenuAutoKill = Tabs.KillAll:Button({
-    Title = "Menu Auto Kill",
+    Title = "Auto Kill",
     Callback = function()
         pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/xitados/free/refs/heads/main/AutoKill"))()
@@ -1650,10 +1602,19 @@ UIElements.BtnMenuAutoKill = Tabs.KillAll:Button({
 })
 
 UIElements.BtnPlataforma = Tabs.KillAll:Button({
-    Title = "Menu Plataforma",
+    Title = "Plataforma",
     Callback = function()
         pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/xitados/free/refs/heads/main/plataforma"))()
+        end)
+    end
+})
+
+UIElements.BtnSkinchanger = Tabs.KillAll:Button({
+    Title = "Skinchanger",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/xitados/free/refs/heads/main/skinchanger"))()
         end)
     end
 })
@@ -2665,28 +2626,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local FOVCircle = nil
-if Drawing then
-    FOVCircle = Drawing.new("Circle")
-    FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-    FOVCircle.Radius = fovRadius
-    FOVCircle.Filled = false
-    FOVCircle.Color = Color3.fromRGB(255, 0, 0)
-    FOVCircle.Visible = false
-    FOVCircle.Thickness = 1
-end
-
-RunService.RenderStepped:Connect(function()
-    if silentAimFovEnabled and FOVCircle then
-        FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-        FOVCircle.Radius = fovRadius
-        FOVCircle.Visible = true
-        FOVCircle.Color = Color3.fromRGB(255, 0, 0)
-    elseif FOVCircle then
-        FOVCircle.Visible = false
-    end
-end)
-
 Players.PlayerRemoving:Connect(function(p)
     cleanESP(p)
 end)
@@ -2733,9 +2672,6 @@ UIElements.TogFarmEvent = Tabs.Farm:Toggle({
     end
 })
 
-
-
--- ========== ANIMACIONES (exclusivas) ==========
 local AnimToggleElements = {}
 
 local function ApplyAnims(ids)
