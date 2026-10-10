@@ -1,9 +1,11 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
 local workspace = game:GetService("Workspace")
-local player = Players.LocalPlayer
-while not player do task.wait() player = Players.LocalPlayer end
+
+local localPlayer = Players.LocalPlayer
+while not localPlayer do task.wait() localPlayer = Players.LocalPlayer end
 
 local teamCheckEnabled = true
 local KillAllEnabled = false
@@ -11,6 +13,23 @@ local hitboxEnabled = false
 local hitboxInvisible = false
 local hitboxSize = 6
 local hitboxColor = Color3.fromRGB(255, 0, 0)
+
+local tbl = {
+	Background = Color3.fromRGB(30, 7, 7),
+	BackgroundAlt = Color3.fromRGB(48, 11, 11),
+	Surface = Color3.fromRGB(52, 14, 14),
+	SurfaceUp = Color3.fromRGB(68, 18, 18),
+	Soft = Color3.fromRGB(255, 99, 99),
+	Line = Color3.fromRGB(112, 40, 40),
+	Border = Color3.fromRGB(236, 96, 96),
+	Text = Color3.fromRGB(255, 236, 236),
+	Icon = Color3.fromRGB(244, 180, 180),
+	Faint = Color3.fromRGB(236, 176, 176),
+	On = Color3.fromRGB(255, 255, 255),
+	OnFill = Color3.fromRGB(123, 40, 40),
+	Danger = Color3.fromRGB(255, 255, 255),
+	DangerFill = Color3.fromRGB(141, 58, 58),
+}
 
 local COLORES_NEUTROS = {
     ["White"] = true,
@@ -26,76 +45,37 @@ local COLORES_NEUTROS = {
 
 local function esColorVerde(c)
     if typeof(c) ~= "Color3" then return false end
-    return c.G >= 0.55
-        and c.G > c.R
-        and c.G > c.B
-        and (c.G - c.R) >= 0.15
-        and (c.G - c.B) >= 0.15
+    return c.G >= 0.55 and c.G > c.R and c.G > c.B and (c.G - c.R) >= 0.15 and (c.G - c.B) >= 0.15
 end
 
 local function guiTieneVerde(obj)
     if not obj then return false end
     local okBg, bg = pcall(function() return obj.BackgroundColor3 end)
     if okBg and bg and esColorVerde(bg) then return true end
-
     if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
         local okT, tc = pcall(function() return obj.TextColor3 end)
         if okT and tc and esColorVerde(tc) then return true end
     end
-
     if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
         local okI, ic = pcall(function() return obj.ImageColor3 end)
         if okI and ic and esColorVerde(ic) then return true end
     end
-
     return false
 end
 
 local function contenedorTieneVerde(container)
     if not container then return false end
     for _, desc in ipairs(container:GetDescendants()) do
-        if desc:IsA("GuiObject") and guiTieneVerde(desc) then
-            return true
-        end
-
-        if desc:IsA("Highlight") then
-            if esColorVerde(desc.FillColor) or esColorVerde(desc.OutlineColor) then
-                return true
-            end
-        end
-
-        if desc:IsA("ParticleEmitter") then
-            local ok, cs = pcall(function() return desc.Color end)
-            if ok and cs then
-                local c0 = cs.Keypoints and cs.Keypoints[1] and cs.Keypoints[1].Value
-                if c0 and esColorVerde(c0) then return true end
-            end
-        end
-
-        if desc:IsA("PointLight") or desc:IsA("SpotLight") then
-            local ok, c = pcall(function() return desc.Color end)
-            if ok and esColorVerde(c) then return true end
-        end
-
-        if desc:IsA("BillboardGui") then
-            for _, sub in ipairs(desc:GetDescendants()) do
-                if sub:IsA("GuiObject") and guiTieneVerde(sub) then
-                    return true
-                end
-            end
-        end
+        if desc:IsA("GuiObject") and guiTieneVerde(desc) then return true end
+        if desc:IsA("Highlight") and (esColorVerde(desc.FillColor) or esColorVerde(desc.OutlineColor)) then return true end
     end
-
     return false
 end
 
 local marcaAliadoCache = {}
 local MARCA_CACHE_TTL = 1.0
-
 local function invalidarMarcaAliado(targetPlayer)
-    if targetPlayer then
-        marcaAliadoCache[targetPlayer] = nil
-    end
+    if targetPlayer then marcaAliadoCache[targetPlayer] = nil end
 end
 
 local ATTRS_ALIADO = {
@@ -108,193 +88,58 @@ local function tieneMarcaAliado(targetPlayer)
     if not targetPlayer then return false end
     local now = os.clock()
     local cached = marcaAliadoCache[targetPlayer]
-    if cached and (now - cached.time) < MARCA_CACHE_TTL then
-        return cached.value
-    end
-
+    if cached and (now - cached.time) < MARCA_CACHE_TTL then return cached.value end
     local resultado = false
     local char = targetPlayer.Character
-
     for _, attrName in ipairs(ATTRS_ALIADO) do
         local v1 = targetPlayer:GetAttribute(attrName)
         if v1 == true or v1 == "true" or v1 == "Ally" or v1 == "ally" then
-            resultado = true
-            break
+            resultado = true; break
         end
-
         if char then
             local v2 = char:GetAttribute(attrName)
             if v2 == true or v2 == "true" or v2 == "Ally" or v2 == "ally" then
-                resultado = true
-                break
+                resultado = true; break
             end
         end
     end
-
-    if not resultado then
-        local myAttr = player:GetAttribute("Team") or player:GetAttribute("team")
-        local otherAttr = targetPlayer:GetAttribute("Team") or targetPlayer:GetAttribute("team")
-
-        if myAttr ~= nil and otherAttr ~= nil and myAttr ~= "" and otherAttr ~= "" and myAttr == otherAttr then
-            resultado = true
-        end
-    end
-
-    if not resultado and char then
-        local head = char:FindFirstChild("Head")
-        if head then
-            for _, child in ipairs(head:GetChildren()) do
-                if child:IsA("BillboardGui") and contenedorTieneVerde(child) then
-                    resultado = true
-                    break
-                end
-
-                if child:IsA("Highlight") and (esColorVerde(child.FillColor) or esColorVerde(child.OutlineColor)) then
-                    resultado = true
-                    break
-                end
-
-                if child:IsA("Attachment") and contenedorTieneVerde(child) then
-                    resultado = true
-                    break
-                end
-            end
-        end
-    end
-
-    if not resultado and char then
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            for _, child in ipairs(hrp:GetChildren()) do
-                if child:IsA("BillboardGui") and contenedorTieneVerde(child) then
-                    resultado = true
-                    break
-                end
-
-                if child:IsA("Attachment") and contenedorTieneVerde(child) then
-                    resultado = true
-                    break
-                end
-
-                if child:IsA("Highlight") and (esColorVerde(child.FillColor) or esColorVerde(child.OutlineColor)) then
-                    resultado = true
-                    break
-                end
-            end
-        end
-    end
-
-    if not resultado and char then
-        for _, child in ipairs(char:GetChildren()) do
-            if child:IsA("Highlight") then
-                if esColorVerde(child.FillColor) or esColorVerde(child.OutlineColor) then
-                    resultado = true
-                    break
-                end
-            end
-        end
-    end
-
-    if not resultado and char then
-        local head = char:FindFirstChild("Head")
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-
-        if head and contenedorTieneVerde(head) then
-            resultado = true
-        end
-
-        if not resultado and hrp and contenedorTieneVerde(hrp) then
-            resultado = true
-        end
-    end
-
-    marcaAliadoCache[targetPlayer] = {
-        value = resultado,
-        time = now
-    }
-
+    marcaAliadoCache[targetPlayer] = { value = resultado, time = now }
     return resultado
 end
 
 local function isEnemy(targetPlayer)
-    if not targetPlayer or targetPlayer == player then return false end
+    if not targetPlayer or targetPlayer == localPlayer then return false end
     if tieneMarcaAliado(targetPlayer) then return false end
-
     if not teamCheckEnabled then return true end
-
-    local myColorName = player.TeamColor and player.TeamColor.Name or "White"
+    local myColorName = localPlayer.TeamColor and localPlayer.TeamColor.Name or "White"
     local otherColorName = targetPlayer.TeamColor and targetPlayer.TeamColor.Name or "White"
-
-    local myColorNeutral = COLORES_NEUTROS[myColorName] == true
-    local otherColorNeutral = COLORES_NEUTROS[otherColorName] == true
-
-    if not myColorNeutral and not otherColorNeutral then
-        return player.TeamColor ~= targetPlayer.TeamColor
+    if not COLORES_NEUTROS[myColorName] and not COLORES_NEUTROS[otherColorName] then
+        return localPlayer.TeamColor ~= targetPlayer.TeamColor
     end
-
-    if player.Team ~= nil and targetPlayer.Team ~= nil then
-        return player.Team ~= targetPlayer.Team
+    if localPlayer.Team ~= nil and targetPlayer.Team ~= nil then
+        return localPlayer.Team ~= targetPlayer.Team
     end
-
-    local myAttr = player:GetAttribute("Team") or player:GetAttribute("team")
-    local otherAttr = targetPlayer:GetAttribute("Team") or targetPlayer:GetAttribute("team")
-
-    if myAttr ~= nil and otherAttr ~= nil and myAttr ~= "" and otherAttr ~= "" then
-        return myAttr ~= otherAttr
-    end
-
     return true
 end
 
 local function esCompaneroDeEquipo(targetPlayer)
-    if not targetPlayer or targetPlayer == player then return true end
-    local myColor = player.TeamColor
-    local otherColor = targetPlayer.TeamColor
-
-    if myColor and otherColor then
-        local myName = myColor.Name
-        local otherName = otherColor.Name
-        local myNeutral = COLORES_NEUTROS[myName] == true
-        local otherNeutral = COLORES_NEUTROS[otherName] == true
-
-        if not myNeutral and not otherNeutral then
-            return myColor == otherColor
-        end
-    end
-
-    if player.Team and targetPlayer.Team then
-        return player.Team == targetPlayer.Team
-    end
-
-    local myAttr = player:GetAttribute("Team") or player:GetAttribute("team")
-    local otherAttr = targetPlayer:GetAttribute("Team") or targetPlayer:GetAttribute("team")
-
-    if myAttr and otherAttr and myAttr ~= "" and otherAttr ~= "" then
-        return myAttr == otherAttr
-    end
-
-    return false
+    if not targetPlayer or targetPlayer == localPlayer then return true end
+    return not isEnemy(targetPlayer)
 end
 
 local function esEnemigoValido(targetPlayer)
-    if not targetPlayer or targetPlayer == player then return false end
+    if not targetPlayer or targetPlayer == localPlayer then return false end
     if not isEnemy(targetPlayer) then return false end
     local char = targetPlayer.Character
     if not char then return false end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum or hum.Health <= 0 then return false end
     if char:FindFirstChildOfClass("ForceField") then return false end
-    if targetPlayer.Team then
-        local tName = string.lower(targetPlayer.Team.Name)
-        if string.find(tName, "lobby") or string.find(tName, "spectat") or string.find(tName, "espectador") or string.find(tName, "menu") or string.find(tName, "dead") then
-            return false
-        end
-    end
     return true
 end
 
 local function IsInMatchStrict()
-    local gui = player:FindFirstChild("PlayerGui")
+    local gui = localPlayer:FindFirstChild("PlayerGui")
     if not gui then return false end
     local main = gui:FindFirstChild("Main") or gui
     local gameFrame = main:FindFirstChild("MainGameFrame")
@@ -302,36 +147,9 @@ local function IsInMatchStrict()
     local score = gameFrame:FindFirstChild("IngameScore")
     local timer = score and score:FindFirstChild("Timer")
     if not timer then return false end
-    if not (timer:IsA("TextLabel") or timer:IsA("TextButton") or timer:IsA("TextBox")) then return false end
-
     local txt = tostring(timer.Text or ""):gsub("%s", "")
-    if txt == "" or string.find(txt, "-") or txt == "0:00" or txt == "00:00" or txt == "0:0" then return false end
-
+    if txt == "" or string.find(txt, "-") or txt == "0:00" or txt == "00:00" then return false end
     return txt:match("^%d+:%d%d$") ~= nil
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= player then p.CharacterAdded:Connect(function() invalidarMarcaAliado(p) end) end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p ~= player then p.CharacterAdded:Connect(function() invalidarMarcaAliado(p) end) end
-end)
-Players.PlayerRemoving:Connect(function(p) invalidarMarcaAliado(p) end)
-player.CharacterAdded:Connect(function() table.clear(marcaAliadoCache) end)
-
-local ConnectionManager = {}
-ConnectionManager.__index = ConnectionManager
-function ConnectionManager.new() return setmetatable({ Items = {} }, ConnectionManager) end
-function ConnectionManager:Add(task) self.Items[#self.Items + 1] = task; return task end
-function ConnectionManager:Cleanup()
-    for i = #self.Items, 1, -1 do
-        local item = self.Items[i]
-        self.Items[i] = nil
-        local t = typeof(item)
-        if t == "RBXScriptConnection" then pcall(function() item:Disconnect() end)
-        elseif t == "Instance" then pcall(function() item:Destroy() end)
-        elseif t == "function" then pcall(item) end
-    end
 end
 
 local function limpiarHitboxes()
@@ -354,7 +172,7 @@ task.spawn(function()
         local tamanoObjetivo = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
         local transObjetivo = hitboxInvisible and 1 or 0.6
         for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            if targetPlayer ~= player and not esCompaneroDeEquipo(targetPlayer) and isEnemy(targetPlayer) then
+            if targetPlayer ~= localPlayer and not esCompaneroDeEquipo(targetPlayer) and isEnemy(targetPlayer) then
                 local character = targetPlayer.Character
                 if character then
                     local rootPart = character:FindFirstChild("HumanoidRootPart")
@@ -379,7 +197,6 @@ task.spawn(function()
                         else
                             if hitbox.Size ~= tamanoObjetivo then hitbox.Size = tamanoObjetivo end
                             if hitbox.Transparency ~= transObjetivo then hitbox.Transparency = transObjetivo end
-                            if hitbox.Color ~= hitboxColor then hitbox.Color = hitboxColor end
                         end
                     end
                 end
@@ -393,6 +210,21 @@ task.spawn(function()
         end
     end
 end)
+
+local ConnectionManager = {}
+ConnectionManager.__index = ConnectionManager
+function ConnectionManager.new() return setmetatable({ Items = {} }, ConnectionManager) end
+function ConnectionManager:Add(task) self.Items[#self.Items + 1] = task; return task end
+function ConnectionManager:Cleanup()
+    for i = #self.Items, 1, -1 do
+        local item = self.Items[i]
+        self.Items[i] = nil
+        local t = typeof(item)
+        if t == "RBXScriptConnection" then pcall(function() item:Disconnect() end)
+        elseif t == "Instance" then pcall(function() item:Destroy() end)
+        elseif t == "function" then pcall(item) end
+    end
+end
 
 local KILLALL_MOVE_SPEED = 39.9
 local KILLALL_APPROACH_DISTANCE = 1.5
@@ -413,7 +245,6 @@ function KillAll.new()
         safePosition = nil,
         sticking = false,
         stickingStartTime = 0,
-        currentTarget = nil,
         lockedTargetPlayer = nil,
         lastStickTarget = nil,
         lastStickTargetHum = nil,
@@ -421,13 +252,11 @@ function KillAll.new()
 end
 
 function KillAll:DisableCollisions()
-    local char = player.Character
+    local char = localPlayer.Character
     if not char then return end
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") and part.CanCollide then
-            if self.savedCollisions[part] == nil then
-                self.savedCollisions[part] = part.CanCollide
-            end
+            if self.savedCollisions[part] == nil then self.savedCollisions[part] = part.CanCollide end
             part.CanCollide = false
         end
     end
@@ -462,17 +291,14 @@ function KillAll:IsLockedTargetValid()
 end
 
 function KillAll:GetClosestEnemy()
-    local myRoot = self:GetRoot(player)
+    local myRoot = self:GetRoot(localPlayer)
     if not myRoot then return nil end
     local lockedRoot = self:IsLockedTargetValid()
     if lockedRoot then return lockedRoot end
-
     self.lockedTargetPlayer = nil
-    self.currentTarget = nil
-
     local best, bestDist, bestPlayer = nil, nil, nil
     for _, other in ipairs(Players:GetPlayers()) do
-        if other ~= player and esEnemigoValido(other) then
+        if other ~= localPlayer and esEnemigoValido(other) then
             local hum = self:GetHumanoid(other)
             local root = self:GetRoot(other)
             if root and hum and hum.Health > 0 then
@@ -483,21 +309,17 @@ function KillAll:GetClosestEnemy()
             end
         end
     end
-
     if bestPlayer then self.lockedTargetPlayer = bestPlayer end
     return best
 end
-
-function KillAll:IsInMatch() return IsInMatchStrict() end
 
 function KillAll:ResetState()
     self.sticking = false
     self.stickingStartTime = 0
     self.swingAccumulator = 0
     self.lockedTargetPlayer = nil
-    self.currentTarget = nil
     self:RestoreCollisions()
-    local hum = self:GetHumanoid(player)
+    local hum = self:GetHumanoid(localPlayer)
     if hum and hum.PlatformStand then pcall(function() hum.PlatformStand = false end) end
 end
 
@@ -507,25 +329,23 @@ function KillAll:ReturnToSafePosition(myRoot)
         pcall(function()
             myRoot.CFrame = CFrame.new(self.safePosition)
             myRoot.AssemblyLinearVelocity = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
         end)
     end
 end
 
 function KillAll:IsKnife(tool)
     if not (tool and tool:IsA("Tool")) then return false end
-    if tool:FindFirstChild("fire") or tool:FindFirstChild("showBeam") then return false end
     return tool:FindFirstChild("Slash") ~= nil or tool:FindFirstChild("SlashStart") ~= nil
 end
 
 function KillAll:FindKnife()
-    local char = player.Character
+    local char = localPlayer.Character
     if char then
         for _, child in ipairs(char:GetChildren()) do
             if self:IsKnife(child) then return child, true end
         end
     end
-    local backpack = player:FindFirstChildOfClass("Backpack")
+    local backpack = localPlayer:FindFirstChildOfClass("Backpack")
     if backpack then
         for _, child in ipairs(backpack:GetChildren()) do
             if self:IsKnife(child) then return child, false end
@@ -540,12 +360,11 @@ function KillAll:SwingKnife(dt)
     self.swingAccumulator = 0
     local tool, equipped = self:FindKnife()
     if not tool then return end
-
     if not equipped then
-        local hum = self:GetHumanoid(player)
+        local hum = self:GetHumanoid(localPlayer)
         if not hum then return end
         pcall(function() hum:EquipTool(tool) end)
-        if tool.Parent ~= player.Character then return end
+        if tool.Parent ~= localPlayer.Character then return end
     end
     pcall(function() tool:Activate() end)
 end
@@ -556,49 +375,34 @@ function KillAll:ForceBelowground(myRoot, targetRoot)
     pcall(function()
         myRoot.CFrame = CFrame.new(myRoot.Position.X, targetY, myRoot.Position.Z)
         myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
     end)
 end
 
 function KillAll:ApproachTarget(myRoot, targetRoot, dt)
-    dt = dt or 0
     local myPos = myRoot.Position
     local targetPos = targetRoot.Position
     local deltaXZ = Vector3.new(targetPos.X - myPos.X, 0, targetPos.Z - myPos.Z)
     local hDist = deltaXZ.Magnitude
     if hDist <= KILLALL_TRIGGER_RADIUS then
         if not self.sticking then
-            local lookTarget = Vector3.new(targetPos.X, myPos.Y, targetPos.Z)
             pcall(function()
-                myRoot.CFrame = CFrame.lookAt(myPos, lookTarget)
+                myRoot.CFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
                 myRoot.AssemblyLinearVelocity = Vector3.zero
-                myRoot.AssemblyAngularVelocity = Vector3.zero
             end)
-
             self.sticking = true
             self.stickingStartTime = os.clock()
             self.lastStickTarget = targetRoot
-            local hum = self:GetHumanoid(targetRoot.Parent)
-            self.lastStickTargetHum = hum
+            self.lastStickTargetHum = self:GetHumanoid(targetRoot.Parent)
         end
         return
     end
-
     local dir = deltaXZ.Unit
     local step = KILLALL_MOVE_SPEED * dt
     local travel = math.min(step, math.max(0, hDist - KILLALL_TRIGGER_RADIUS))
-
-    local newX = myPos.X + dir.X * travel
-    local newZ = myPos.Z + dir.Z * travel
-    local newY = targetPos.Y - KILLALL_BELOW_HEIGHT
-
-    local newPos = Vector3.new(newX, newY, newZ)
-    local lookTarget = Vector3.new(targetPos.X, newPos.Y, targetPos.Z)
-
+    local newPos = Vector3.new(myPos.X + dir.X * travel, targetPos.Y - KILLALL_BELOW_HEIGHT, myPos.Z + dir.Z * travel)
     pcall(function()
-        myRoot.CFrame = CFrame.lookAt(newPos, lookTarget)
+        myRoot.CFrame = CFrame.lookAt(newPos, Vector3.new(targetPos.X, newPos.Y, targetPos.Z))
         myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
     end)
 end
 
@@ -607,51 +411,37 @@ function KillAll:StickToTarget(myRoot, targetRoot)
     local ghostHitbox = enemyChar and enemyChar:FindFirstChild("GhostHitbox")
     local targetPos = ghostHitbox and ghostHitbox.Position or targetRoot.Position
     local hitboxOffset = ghostHitbox and (ghostHitbox.Size.Y / 2) or (hitboxSize / 2)
-
     local targetPositionUnder = targetPos - Vector3.new(0, hitboxOffset + KILLALL_APPROACH_DISTANCE, 0)
-
     pcall(function()
         myRoot.CFrame = CFrame.lookAt(targetPositionUnder, targetPos)
         myRoot.AssemblyLinearVelocity = Vector3.zero
-        myRoot.AssemblyAngularVelocity = Vector3.zero
     end)
 end
 
 function KillAll:Update(dt)
-    if not self:IsInMatch() then
+    if not IsInMatchStrict() then
         self:ResetState()
         return
     end
-    local myRoot = self:GetRoot(player)
+    local myRoot = self:GetRoot(localPlayer)
     if not myRoot then self:ResetState(); return end
-
-    if self.lastStickTargetHum then
-        local hum = self.lastStickTargetHum
-        if not hum.Parent or hum.Health <= 0 then
-            self.lastStickTargetHum = nil
-            self.lastStickTarget = nil
-            self.sticking = false
-            self.lockedTargetPlayer = nil
-            return
-        end
+    if self.lastStickTargetHum and (not self.lastStickTargetHum.Parent or self.lastStickTargetHum.Health <= 0) then
+        self.lastStickTargetHum = nil
+        self.lastStickTarget = nil
+        self.sticking = false
+        self.lockedTargetPlayer = nil
+        return
     end
-
     local target = self:GetClosestEnemy()
     if not target then
         self:ReturnToSafePosition(myRoot)
         self:ResetState()
         return
     end
-
     self:DisableCollisions()
-
-    local hum = self:GetHumanoid(player)
+    local hum = self:GetHumanoid(localPlayer)
     if hum and not hum.PlatformStand then pcall(function() hum.PlatformStand = true end) end
-
-    if not self.sticking then 
-        self:ForceBelowground(myRoot, target) 
-    end
-
+    if not self.sticking then self:ForceBelowground(myRoot, target) end
     if self.sticking then
         if target ~= self.lastStickTarget or (os.clock() - self.stickingStartTime) > KILLALL_STICK_MAX_TIME then
             self.sticking = false
@@ -661,7 +451,6 @@ function KillAll:Update(dt)
             return
         end
     end
-
     self:ApproachTarget(myRoot, target, dt or 0)
 end
 
@@ -669,9 +458,8 @@ function KillAll:Start()
     if self.running then return end
     self.running = true
     KillAllEnabled = true
-    local myRoot = self:GetRoot(player)
+    local myRoot = self:GetRoot(localPlayer)
     self.safePosition = myRoot and myRoot.Position or nil
-
     self.connections:Add(RunService.Heartbeat:Connect(function(dt)
         if self.running then self:Update(dt) end
     end))
@@ -682,191 +470,219 @@ function KillAll:Stop()
     KillAllEnabled = false
     self.connections:Cleanup()
     self.connections = ConnectionManager.new()
-    local myRoot = self:GetRoot(player)
+    local myRoot = self:GetRoot(localPlayer)
     if myRoot and self.safePosition then
         pcall(function()
             myRoot.CFrame = CFrame.new(self.safePosition)
             myRoot.AssemblyLinearVelocity = Vector3.zero
-            myRoot.AssemblyAngularVelocity = Vector3.zero
         end)
     end
-
     self:ResetState()
 end
 
 local KillAllInstance = KillAll.new()
 
-local function setKillAllHitbox(enabled)
-    if enabled then
-        hitboxEnabled = true
-        hitboxInvisible = false
-        hitboxSize = 6
-    else
-        hitboxEnabled = false
-        limpiarHitboxes()
-    end
-end
-
 local function setKillAllEnabled(value)
     KillAllEnabled = value == true
     if KillAllEnabled then
-        setKillAllHitbox(true)
+        hitboxEnabled = true
         KillAllInstance:Start()
     else
-        setKillAllHitbox(false)
+        hitboxEnabled = false
+        limpiarHitboxes()
         KillAllInstance:Stop()
     end
 end
 
-local function BuildCustomMenu()
-    local playerGui = player:WaitForChild("PlayerGui")
-    local existingMenu = playerGui:FindFirstChild("ClanxitadosCustomMenu")
-    if existingMenu then existingMenu:Destroy() end
+local v3 = gethui and gethui() or CoreGui
+local oldMenu = v3:FindFirstChild("XitadosKillAll") or localPlayer.PlayerGui:FindFirstChild("XitadosKillAll")
+if oldMenu then oldMenu:Destroy() end
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ClanxitadosCustomMenu"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = playerGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "XitadosKillAll"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.DisplayOrder = 2147483647
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = v3
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 320, 0, 180)
-    mainFrame.Position = UDim2.new(0.5, -160, 0.4, -90)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(18, 10, 10)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = true
-    mainFrame.Parent = screenGui
+local Frame = Instance.new("Frame")
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.Position = UDim2.fromScale(0.5, 0.5)
+Frame.Size = UDim2.fromOffset(320, 180)
+Frame.BackgroundColor3 = tbl.Background
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Parent = screenGui
 
-    local cornerMain = Instance.new("UICorner")
-    cornerMain.CornerRadius = UDim.new(0, 10)
-    cornerMain.Parent = mainFrame
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 16)
+uiCorner.Parent = Frame
 
-    local topBar = Instance.new("Frame")
-    topBar.Name = "TopBar"
-    topBar.Size = UDim2.new(1, 0, 0, 45)
-    topBar.BackgroundTransparency = 1
-    topBar.Parent = mainFrame
+local uiStroke = Instance.new("UIStroke")
+uiStroke.Color = tbl.Border
+uiStroke.Thickness = 1
+uiStroke.Transparency = 0.2
+uiStroke.Parent = Frame
 
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0, 150, 0, 20)
-    titleLabel.Position = UDim2.new(0, 14, 0, 8)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.RichText = true
-    titleLabel.Text = "Clan <font color='#ff7575'>Xitados</font>"
-    titleLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Font = Enum.Font.SourceSansBold
-    titleLabel.TextSize = 15
-    titleLabel.Parent = topBar
+local uiGradient = Instance.new("UIGradient")
+uiGradient.Color = ColorSequence.new(tbl.BackgroundAlt, tbl.Background)
+uiGradient.Rotation = 90
+uiGradient.Parent = Frame
 
-    local subTitleLabel = Instance.new("TextLabel")
-    subTitleLabel.Size = UDim2.new(0, 150, 0, 14)
-    subTitleLabel.Position = UDim2.new(0, 14, 0, 26)
-    subTitleLabel.BackgroundTransparency = 1
-    subTitleLabel.Text = "By DiegoGuapo"
-    subTitleLabel.TextColor3 = Color3.fromRGB(130, 120, 120)
-    subTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    subTitleLabel.Font = Enum.Font.SourceSans
-    subTitleLabel.TextSize = 12
-    subTitleLabel.Parent = topBar
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 52)
+topBar.BackgroundTransparency = 1
+topBar.Parent = Frame
 
-    local minimizeBtn = Instance.new("TextButton")
-    minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
-    minimizeBtn.Position = UDim2.new(1, -26, 0, 10)
-    minimizeBtn.BackgroundTransparency = 1
-    minimizeBtn.Text = "—"
-    minimizeBtn.TextColor3 = Color3.fromRGB(200, 40, 40)
-    minimizeBtn.Font = Enum.Font.SourceSansBold
-    minimizeBtn.TextSize = 12
-    minimizeBtn.Parent = topBar
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Position = UDim2.fromOffset(18, 15)
+titleLabel.Size = UDim2.fromOffset(160, 22)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "Xitados"
+titleLabel.TextSize = 17
+titleLabel.TextColor3 = tbl.Text
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
 
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Name = "ContentFrame"
-    contentFrame.Size = UDim2.new(1, -120, 1, -50)
-    contentFrame.Position = UDim2.new(0, 110, 0, 42)
-    contentFrame.BackgroundColor3 = Color3.fromRGB(26, 14, 14)
-    contentFrame.BorderSizePixel = 0
-    contentFrame.Parent = mainFrame
+local line = Instance.new("Frame")
+line.Position = UDim2.fromOffset(0, 52)
+line.Size = UDim2.new(1, 0, 0, 1)
+line.BackgroundColor3 = tbl.Line
+line.BorderSizePixel = 0
+line.Parent = Frame
 
-    local cornerContent = Instance.new("UICorner")
-    cornerContent.CornerRadius = UDim.new(0, 8)
-    cornerContent.Parent = contentFrame
+local minBtn = Instance.new("TextButton")
+minBtn.AnchorPoint = Vector2.new(1, 0)
+minBtn.Position = UDim2.new(1, -44, 0, 13)
+minBtn.Size = UDim2.fromOffset(26, 26)
+minBtn.BackgroundColor3 = tbl.Surface
+minBtn.BorderSizePixel = 0
+minBtn.Font = Enum.Font.GothamBold
+minBtn.Text = "—"
+minBtn.TextSize = 12
+minBtn.TextColor3 = tbl.Icon
+minBtn.Parent = topBar
 
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0.85, 0, 0, 32)
-    toggleBtn.Position = UDim2.new(0.075, 0, 0.12, 0)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 20)
-    toggleBtn.BorderSizePixel = 0
-    toggleBtn.Text = "AutoKill: OFF"
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleBtn.Font = Enum.Font.SourceSansBold
-    toggleBtn.TextSize = 13
-    toggleBtn.Parent = contentFrame
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 8)
+minCorner.Parent = minBtn
 
-    local cornerToggle = Instance.new("UICorner")
-    cornerToggle.CornerRadius = UDim.new(0, 6)
-    cornerToggle.Parent = toggleBtn
+local closeBtn = Instance.new("TextButton")
+closeBtn.AnchorPoint = Vector2.new(1, 0)
+closeBtn.Position = UDim2.new(1, -14, 0, 13)
+closeBtn.Size = UDim2.fromOffset(26, 26)
+closeBtn.BackgroundColor3 = tbl.Surface
+closeBtn.BorderSizePixel = 0
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Text = "✕"
+closeBtn.TextSize = 12
+closeBtn.TextColor3 = tbl.Icon
+closeBtn.Parent = topBar
 
-    local warningLabel = Instance.new("TextLabel")
-    warningLabel.Size = UDim2.new(0.9, 0, 0, 65)
-    warningLabel.Position = UDim2.new(0.05, 0, 0.45, 0)
-    warningLabel.BackgroundTransparency = 1
-    warningLabel.Text = "si se empieza a laguear apagalo y prendelo de nuevo si no funciona no lo uses"
-    warningLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
-    warningLabel.Font = Enum.Font.SourceSansBold
-    warningLabel.TextSize = 11
-    warningLabel.TextWrapped = true
-    warningLabel.TextYAlignment = Enum.TextYAlignment.Top
-    warningLabel.Parent = contentFrame
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeBtn
 
-    local dragging, dragInput, dragStart, startPos
-    topBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; dragStart = input.Position; startPos = mainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
-    end)
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Position = UDim2.fromOffset(18, 68)
+toggleBtn.Size = UDim2.new(1, -36, 0, 36)
+toggleBtn.BackgroundColor3 = tbl.Surface
+toggleBtn.BorderSizePixel = 0
+toggleBtn.AutoButtonColor = true
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Text = "AutoKill: OFF"
+toggleBtn.TextSize = 13
+toggleBtn.TextColor3 = tbl.Icon
+toggleBtn.Parent = Frame
 
-    topBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleBtn
 
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+local warningLabel = Instance.new("TextLabel")
+warningLabel.Position = UDim2.fromOffset(18, 114)
+warningLabel.Size = UDim2.new(1, -36, 0, 50)
+warningLabel.BackgroundTransparency = 1
+warningLabel.Font = Enum.Font.Gotham
+warningLabel.Text = "si se empieza a laguear apagalo y prendelo de nuevo si no funciona no lo uses"
+warningLabel.TextSize = 11
+warningLabel.TextColor3 = Color3.fromRGB(255, 170, 0)
+warningLabel.TextWrapped = true
+warningLabel.TextYAlignment = Enum.TextYAlignment.Top
+warningLabel.Parent = Frame
 
-    local isMinimized = false
-    minimizeBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        contentFrame.Visible = not isMinimized
-        mainFrame.Size = isMinimized and UDim2.new(0, 320, 0, 45) or UDim2.new(0, 320, 0, 180)
-    end)
+local minFloatBtn = Instance.new("TextButton")
+minFloatBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+minFloatBtn.Size = UDim2.fromOffset(46, 46)
+minFloatBtn.BackgroundColor3 = tbl.Background
+minFloatBtn.BorderSizePixel = 0
+minFloatBtn.Font = Enum.Font.GothamBold
+minFloatBtn.Text = "X"
+minFloatBtn.TextSize = 18
+minFloatBtn.TextColor3 = tbl.Text
+minFloatBtn.Visible = false
+minFloatBtn.Parent = screenGui
 
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == Enum.KeyCode.M then
-            mainFrame.Visible = not mainFrame.Visible
-        end
-    end)
+local floatCorner = Instance.new("UICorner")
+floatCorner.CornerRadius = UDim.new(0, 23)
+floatCorner.Parent = minFloatBtn
 
-    toggleBtn.MouseButton1Click:Connect(function()
-        local newState = not KillAllEnabled
-        setKillAllEnabled(newState)
+local floatStroke = Instance.new("UIStroke")
+floatStroke.Color = tbl.Border
+floatStroke.Thickness = 1.5
+floatStroke.Transparency = 0.1
+floatStroke.Parent = minFloatBtn
 
-        if newState then
-            toggleBtn.Text = "AutoKill: ON"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(140, 30, 30)
-        else
-            toggleBtn.Text = "AutoKill: OFF"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 20)
-        end
-    end)
-end
+toggleBtn.Activated:Connect(function()
+    local newState = not KillAllEnabled
+    setKillAllEnabled(newState)
+    if newState then
+        toggleBtn.Text = "AutoKill: ON"
+        toggleBtn.BackgroundColor3 = tbl.OnFill
+        toggleBtn.TextColor3 = tbl.On
+    else
+        toggleBtn.Text = "AutoKill: OFF"
+        toggleBtn.BackgroundColor3 = tbl.Surface
+        toggleBtn.TextColor3 = tbl.Icon
+    end
+end)
 
-BuildCustomMenu()
+minBtn.Activated:Connect(function()
+    Frame.Visible = false
+    minFloatBtn.Position = UDim2.fromOffset(Frame.AbsolutePosition.X + 26, Frame.AbsolutePosition.Y + 26)
+    minFloatBtn.Visible = true
+end)
+
+minFloatBtn.Activated:Connect(function()
+    minFloatBtn.Visible = false
+    Frame.Visible = true
+end)
+
+closeBtn.Activated:Connect(function()
+    setKillAllEnabled(false)
+    screenGui:Destroy()
+end)
+
+local dragging, dragStart, startPos
+topBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+    end
+end)
+
+topBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
