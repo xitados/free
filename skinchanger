@@ -1,0 +1,1991 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local UserService = game:GetService("UserService")
+local str = "xitados/duelos-apariencia.json"
+local localPlayer = Players.LocalPlayer
+
+local tbl = {
+	Background = Color3.fromRGB(30, 7, 7),
+	BackgroundAlt = Color3.fromRGB(48, 11, 11),
+	Surface = Color3.fromRGB(52, 14, 14),
+	SurfaceUp = Color3.fromRGB(68, 18, 18),
+	Soft = Color3.fromRGB(255, 99, 99),
+	Line = Color3.fromRGB(112, 40, 40),
+	Border = Color3.fromRGB(236, 96, 96),
+	Text = Color3.fromRGB(255, 236, 236),
+	Icon = Color3.fromRGB(244, 180, 180),
+	Faint = Color3.fromRGB(236, 176, 176),
+	On = Color3.fromRGB(255, 255, 255),
+	OnFill = Color3.fromRGB(123, 40, 40),
+	Accent = Color3.fromRGB(255, 255, 255),
+	AccentFill = Color3.fromRGB(164, 31, 31),
+	Danger = Color3.fromRGB(255, 255, 255),
+	DangerFill = Color3.fromRGB(141, 58, 58),
+}
+
+local n = 420
+local n2 = 274
+
+local tbl2 = {
+	idle = "IdleAnimation",
+	walk = "WalkAnimation",
+	run = "RunAnimation",
+	jump = "JumpAnimation",
+	fall = "FallAnimation",
+	climb = "ClimbAnimation",
+	swim = "SwimAnimation",
+}
+
+local tbl3 = {
+	userId = nil,
+	nombre = nil,
+	usuario = nil,
+	aplicado = nil,
+	rig = "R15",
+}
+
+local function fn()
+	if typeof(readfile) ~= "function" or typeof(isfile) ~= "function" then
+		return
+	end
+
+	local ok, result = pcall(function()
+		return isfile(str) and readfile(str) or nil
+	end)
+
+	if not ok or type(result) ~= "string" then
+		return
+	end
+	local ok2, result2 = pcall(HttpService.JSONDecode, HttpService, result)
+	if not (ok2 and type(result2) == "table") then
+		return
+	end
+
+	if tonumber(result2.userId) then
+		tbl3.userId = tonumber(result2.userId)
+		tbl3.nombre = tostring(result2.nombre or result2.userId)
+		tbl3.usuario = type(result2.usuario) == "string" and result2.usuario or nil
+	end
+
+	if result2.rig == "R6" or result2.rig == "R15" then
+		tbl3.rig = result2.rig
+	end
+end
+
+local function fn2()
+	if typeof(writefile) ~= "function" then
+		return
+	end
+
+	pcall(function()
+		if typeof(isfolder) == "function" and typeof(makefolder) == "function" and not isfolder("xitados") then
+			makefolder("xitados")
+		end
+	end)
+
+	pcall(writefile, str, HttpService:JSONEncode({
+		userId = tbl3.userId,
+		nombre = tbl3.nombre,
+		usuario = tbl3.usuario,
+		rig = tbl3.rig,
+	}))
+end
+
+local function fn3(arg, arg2, parent, arg3)
+	local instance = Instance.new(arg)
+
+	for k, v in pairs(arg2) do
+		instance[k] = v
+	end
+
+	if instance:IsA("TextButton") and arg2.Text and arg2.Text ~= "" then
+		instance.TextStrokeColor3 = Color3.new(0, 0, 0)
+		instance.TextStrokeTransparency = 0.75
+	end
+
+	if arg3 then
+		local uiCorner = Instance.new("UICorner")
+		uiCorner.CornerRadius = UDim.new(0, arg3)
+		uiCorner.Parent = instance
+	end
+
+	instance.Parent = parent
+	return instance
+end
+
+local v = nil
+local tbl4 = {}
+
+local function fn4(arg, arg2)
+	if not v then
+		table.insert(tbl4, { arg, arg2 })
+		return
+	end
+	local ok, result = pcall(v.GetAsset, arg2)
+
+	if ok and result then
+		arg.Image = result.Url
+		arg.ImageRectOffset = result.ImageRectOffset
+		arg.ImageRectSize = result.ImageRectSize
+	end
+end
+
+task.spawn(function()
+	local ok, result = pcall(function()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/lucide-roblox-direct/refs/heads/main/source.lua"))()
+	end)
+
+	if ok and type(result) == "table" and result.GetAsset then
+		v = result
+
+		for _, v2 in ipairs(tbl4) do
+			fn4(v2[1], v2[2])
+		end
+
+		table.clear(tbl4)
+	end
+end)
+
+local function createImageLabel(parent, arg, arg2, imageColor3, position)
+	local imageLabel = Instance.new("ImageLabel")
+	imageLabel.BackgroundTransparency = 1
+	imageLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	imageLabel.Position = position or UDim2.fromScale(0.5, 0.5)
+	imageLabel.Size = UDim2.fromOffset(arg2, arg2)
+	imageLabel.ImageColor3 = imageColor3
+	imageLabel.Image = ""
+	imageLabel.Active = false
+	imageLabel.Parent = parent
+	fn4(imageLabel, arg)
+	return imageLabel
+end
+
+local function fn5()
+	local character = localPlayer.Character
+	if not character then
+		return nil
+	end
+
+	if character.Name:find("d55076dde45f5d1c5267", 1, true) then
+		return nil
+	end
+	return character
+end
+
+local function fn6(arg, arg2, arg3)
+	local ok, result
+
+	if arg3 == "R6" then
+		if not arg2 then
+			return nil
+		end
+		ok, result = pcall(Players.CreateHumanoidModelFromDescription, Players, arg2, Enum.HumanoidRigType.R6)
+	else
+		ok, result = pcall(Players.CreateHumanoidModelFromUserId, Players, arg)
+		local humanoid = ok and result and result:FindFirstChildOfClass("Humanoid")
+
+		if humanoid and humanoid.RigType ~= Enum.HumanoidRigType.R15 and arg2 then
+			result:Destroy()
+			ok, result = pcall(Players.CreateHumanoidModelFromDescription, Players, arg2, Enum.HumanoidRigType.R15)
+		end
+	end
+
+	if not (ok and result) then
+		return nil
+	end
+	result.Parent = nil
+	return result
+end
+
+local tbl5 = {}
+
+local function fn7(arg)
+	if tbl5[arg] then
+		return tbl5[arg].nombre, tbl5[arg].usuario
+	end
+	local playerByUserId = Players:GetPlayerByUserId(arg)
+	local displayName, name
+
+	if playerByUserId then
+		displayName = playerByUserId.DisplayName
+		name = playerByUserId.Name
+	else
+		local ok, result = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, { arg })
+		ok = ok and type(result) == "table" and result[1]
+		displayName = nil
+		name = nil
+
+		if ok then
+			displayName = result[1].DisplayName
+			name = result[1].Username
+		end
+
+		if not name then
+			local ok2, result2 = pcall(Players.GetNameFromUserIdAsync, Players, arg)
+
+			if ok2 and result2 then
+				if displayName then
+					name = result2
+				else
+					displayName = result2
+					name = result2
+				end
+			end
+		end
+	end
+
+	if name then
+		tbl5[arg] = { nombre = displayName or name, usuario = name }
+	end
+
+	return displayName, name
+end
+
+local tbl6 = {}
+
+local function fn8(arg)
+	if tbl6[arg] then
+		return tbl6[arg]
+	end
+	local ok, result = pcall(Players.GetCharacterAppearanceInfoAsync, Players, arg)
+	ok = ok and type(result) == "table" and result.playerAvatarType
+	if ok == "R6" or ok == "R15" then
+		tbl6[arg] = ok
+		return ok
+	end
+	return nil
+end
+
+local tbl7 = {}
+
+local function fn9(arg)
+	if tbl7[arg] then
+		return tbl7[arg]
+	end
+	local playerByUserId = Players:GetPlayerByUserId(arg)
+	local humanoid = playerByUserId and playerByUserId.Character and playerByUserId.Character:FindFirstChildOfClass("Humanoid")
+	local v2 = nil
+
+	if humanoid then
+		local ok, result = pcall(humanoid.GetAppliedDescription, humanoid)
+		ok = ok and result
+		v2 = nil
+
+		if ok then
+			v2 = result
+		end
+	end
+
+	if not v2 then
+		local ok, result = pcall(Players.GetHumanoidDescriptionFromUserId, Players, arg)
+
+		if ok and result then
+			v2 = result
+		end
+	end
+
+	if v2 then
+		tbl7[arg] = v2
+	end
+
+	return v2
+end
+
+local tbl8 = {}
+
+local function fn10(arg)
+	local str2 = tostring(arg)
+	if tbl8[str2] ~= nil then
+		return tbl8[str2] or nil
+	end
+	local ok, result = pcall(game.GetObjects, game, "rbxassetid://" .. str2)
+	if not (ok and type(result) == "table") then
+		tbl8[str2] = false
+		return nil
+	end
+
+	for _, v2 in ipairs(result) do
+		v2.Parent = nil
+	end
+
+	tbl8[str2] = result
+	return result
+end
+
+local function fn11(arg)
+	local n3 = 0
+
+	for _, v2 in pairs(tbl2) do
+		local v3 = arg[v2]
+
+		if type(v3) == "number" and v3 > 0 and tbl8[tostring(v3)] == nil then
+			n3 += 1
+
+			task.spawn(function()
+				fn10(v3)
+				n3 -= 1
+			end)
+		end
+	end
+
+	local now = os.clock()
+
+	while n3 > 0 and os.clock() - now < 15 do
+		task.wait(0.05)
+	end
+end
+
+local function fn12(arg)
+	local tbl9 = {}
+	fn11(arg)
+
+	for k, v2 in pairs(tbl2) do
+		local v3 = arg[v2]
+
+		if type(v3) == "number" and v3 > 0 then
+			local v4 = fn10(v3)
+			local v5 = ipairs
+			local tbl10 = v4 or {}
+
+			for _, v6 in v5(tbl10) do
+				for _, descendant in ipairs(v6:GetDescendants()) do
+					if descendant:IsA("Animation") and descendant.Parent and descendant.Parent ~= v6 then
+						local name = descendant.Parent.Name
+						tbl9[name] = tbl9[name] or {}
+						table.insert(tbl9[name], descendant)
+					elseif descendant:IsA("Animation") then
+						tbl9[k] = tbl9[k] or {}
+						table.insert(tbl9[k], descendant)
+					end
+				end
+			end
+		end
+	end
+
+	return tbl9
+end
+
+local function fn13(arg)
+	local tbl9 = {}
+	local ok, result = pcall(arg.GetEmotes, arg)
+	if not (ok and type(result) == "table") then
+		return tbl9
+	end
+	local tbl10 = {}
+	local ok2, result2 = pcall(arg.GetEquippedEmotes, arg)
+
+	if ok2 and type(result2) == "table" then
+		for _, v2 in ipairs(result2) do
+			tbl10[v2.Name] = v2.Slot
+		end
+	end
+
+	for k, v2 in pairs(result) do
+		local num = type(v2) == "table" and tonumber(v2[1]) or tonumber(v2)
+
+		if num then
+			table.insert(tbl9, { nombre = k, id = num, slot = tbl10[k] or 99 })
+		end
+	end
+
+	table.sort(tbl9, function(arg2, arg3)
+		if arg2.slot ~= arg3.slot then
+			return arg2.slot < arg3.slot
+		end
+		return arg2.nombre < arg3.nombre
+	end)
+
+	return tbl9
+end
+
+local obj = setmetatable({}, { __mode = "k" })
+
+local function fn14(arg)
+	if obj[arg] then
+		return obj[arg]
+	end
+	local tbl9 = { anim = {} }
+	local humanoid = arg:FindFirstChildOfClass("Humanoid")
+
+	if humanoid then
+		tbl9.hipHeight = humanoid.HipHeight
+	end
+
+	local animate = arg:FindFirstChild("Animate")
+
+	if animate then
+		for k in pairs(tbl2) do
+			local v2 = animate:FindFirstChild(k)
+
+			if v2 then
+				tbl9.anim[k] = {}
+
+				for _, child in ipairs(v2:GetChildren()) do
+					if child:IsA("Animation") then
+						local clone = child:Clone()
+						clone.Parent = nil
+						table.insert(tbl9.anim[k], clone)
+					end
+				end
+			end
+		end
+	end
+
+	obj[arg] = tbl9
+	return tbl9
+end
+
+local function fn15(arg, arg2)
+	local humanoid = arg:FindFirstChildOfClass("Humanoid")
+
+	if humanoid and arg2.hipHeight then
+		pcall(function()
+			humanoid.HipHeight = arg2.hipHeight
+		end)
+	end
+end
+
+local function fn16(arg)
+	local animate = arg:FindFirstChild("Animate")
+	local humanoid = arg:FindFirstChildOfClass("Humanoid")
+	if not (animate and humanoid) then
+		return
+	end
+
+	for _, v2 in ipairs(humanoid:GetPlayingAnimationTracks()) do
+		if v2.Priority ~= Enum.AnimationPriority.Action then
+			pcall(v2.Stop, v2, 0)
+		end
+	end
+
+	animate.Disabled = true
+	animate.Disabled = false
+end
+
+local function fn17(arg, arg2)
+	local animate = arg:FindFirstChild("Animate")
+	if not animate then
+		return 0
+	end
+	local n3 = 0
+
+	for k, v2 in pairs(arg2) do
+		local v3 = animate:FindFirstChild(k)
+
+		if v3 and #v2 > 0 then
+			for _, child in ipairs(v3:GetChildren()) do
+				if child:IsA("Animation") then
+					child:Destroy()
+				end
+			end
+
+			for _, v4 in ipairs(v2) do
+				v4:Clone().Parent = v3
+				n3 += 1
+			end
+		end
+	end
+
+	if n3 > 0 then
+		fn16(arg)
+	end
+
+	return n3
+end
+
+local function fn18(arg, arg2)
+	local animate = arg:FindFirstChild("Animate")
+	if not (animate and arg2 and arg2.anim) then
+		return
+	end
+	local flag = false
+
+	for k, v2 in pairs(arg2.anim) do
+		local v3 = animate:FindFirstChild(k)
+
+		if v3 then
+			for _, child in ipairs(v3:GetChildren()) do
+				if child:IsA("Animation") then
+					child:Destroy()
+				end
+			end
+
+			for _, v4 in ipairs(v2) do
+				v4:Clone().Parent = v3
+			end
+
+			flag = true
+		end
+	end
+
+	if flag then
+		fn16(arg)
+	end
+end
+
+local obj2 = setmetatable({}, { __mode = "k" })
+
+local function fn19(arg)
+	arg = arg and arg:FindFirstChildOfClass("Humanoid")
+	return arg and arg:FindFirstChildOfClass("HumanoidDescription") or nil
+end
+
+local function fn20(arg, arg2)
+	local v2 = fn19(arg)
+	if not v2 then
+		return 0
+	end
+
+	if not obj2[arg] then
+		local ok, result = pcall(v2.GetEmotes, v2)
+		local ok2, result2 = pcall(v2.GetEquippedEmotes, v2)
+		local tbl9 = {}
+		local v3 = ipairs
+		result2 = ok2 and result2 or {}
+
+		for _, v4 in v3(result2) do
+			tbl9[#tbl9 + 1] = v4.Name
+		end
+
+		obj2[arg] = { emotes = ok and result or {}, equipados = tbl9 }
+	end
+
+	local tbl9 = {}
+	local tbl10 = {}
+
+	for _, v3 in ipairs(arg2) do
+		tbl9[v3.nombre] = { v3.id }
+
+		if #tbl10 < 8 then
+			tbl10[#tbl10 + 1] = v3.nombre
+		end
+	end
+
+	return pcall(function()
+		v2:SetEmotes(tbl9)
+		v2:SetEquippedEmotes(tbl10)
+	end) and #tbl10 or 0
+end
+
+local tbl9 = nil
+
+local function fn21()
+	if tbl9 then
+		return tbl9
+	end
+	local ok, result = pcall(Players.GetHumanoidDescriptionFromUserId, Players, localPlayer.UserId)
+	if not (ok and result) then
+		return nil
+	end
+	local ok2, result2 = pcall(result.GetEmotes, result)
+	local ok3, result3 = pcall(result.GetEquippedEmotes, result)
+	if not (ok2 and ok3) then
+		return nil
+	end
+	local tbl10 = {}
+
+	for _, v2 in ipairs(result3) do
+		tbl10[#tbl10 + 1] = v2.Name
+	end
+
+	tbl9 = { emotes = result2, equipados = tbl10 }
+	return tbl9
+end
+
+local function fn22(arg)
+	local v2 = fn19(arg)
+	if not v2 then
+		return
+	end
+	local v3 = fn21() or obj2[arg]
+	if not v3 then
+		return
+	end
+
+	pcall(function()
+		v2:SetEmotes(v3.emotes)
+		v2:SetEquippedEmotes(v3.equipados)
+	end)
+end
+
+local tbl10 = {}
+
+local tbl11 = {
+	p0 = "HumanoidRootPart",
+	p1 = "Torso",
+	m0 = "HumanoidRootPart",
+	m1 = "UpperTorso",
+	r15 = { "Root", "Waist" },
+	c0 = CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+	c1 = CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+}
+
+local tbl12 = {
+	p0 = "Torso",
+	p1 = "Head",
+	m0 = "UpperTorso",
+	m1 = "Head",
+	r15 = { "Neck" },
+	c0 = CFrame.new(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+	c1 = CFrame.new(0, -0.5, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+}
+
+local tbl13 = {
+	p0 = "Torso",
+	p1 = "Right Arm",
+	m0 = "UpperTorso",
+	m1 = "RightUpperArm",
+	r15 = { "RightShoulder" },
+	c0 = CFrame.new(1, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+	c1 = CFrame.new(-0.5, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+}
+
+local tbl14 = {
+	p0 = "Torso",
+	p1 = "Left Arm",
+	m0 = "UpperTorso",
+	m1 = "LeftUpperArm",
+	r15 = { "LeftShoulder" },
+	c0 = CFrame.new(-1, 0.5, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	c1 = CFrame.new(0.5, 0.5, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+}
+
+local tbl15 = {
+	p0 = "Torso",
+	p1 = "Right Leg",
+	m0 = "UpperTorso",
+	m1 = "RightUpperLeg",
+	r15 = { "RightHip" },
+	c0 = CFrame.new(1, -1, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+	c1 = CFrame.new(0.5, 1, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+}
+
+local tbl16 = {
+	p0 = "Torso",
+	p1 = "Left Leg",
+	m0 = "UpperTorso",
+	m1 = "LeftUpperLeg",
+	r15 = { "LeftHip" },
+	c0 = CFrame.new(-1, -1, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	c1 = CFrame.new(-0.5, 1, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+}
+
+tbl10[1] = tbl11
+tbl10[2] = tbl12
+tbl10[3] = tbl13
+tbl10[4] = tbl14
+tbl10[5] = tbl15
+tbl10[6] = tbl16
+local tbl17 = { modelo = nil, char = nil, cadena = {}, conn = nil, connFisica = nil }
+
+local function fn23(arg)
+	local tbl18 = {}
+
+	for _, descendant in ipairs(arg:GetDescendants()) do
+		if (descendant:IsA("Motor6D") or descendant:IsA("AnimationConstraint")) and not tbl18[descendant.Name] then
+			tbl18[descendant.Name] = descendant
+		end
+	end
+
+	return tbl18
+end
+
+local function fn24(arg)
+	if arg:IsA("Motor6D") then
+		return arg.C0.Rotation, arg.C1.Rotation
+	end
+	local attachment0 = arg.Attachment0
+	local attachment1 = arg.Attachment1
+	return attachment0 and attachment0.CFrame.Rotation or CFrame.identity, attachment1 and attachment1.CFrame.Rotation or CFrame.identity
+end
+
+local function fn25(arg, arg2, arg3, arg4, arg5)
+	local cframe = CFrame.identity
+	local cframe2 = CFrame.identity
+
+	if #arg5 > 0 then
+		local v2 = fn24(arg5[1])
+		local v3, v4 = fn24(arg5[#arg5])
+		cframe = arg3.Rotation:Inverse() * v2
+		local rotation = arg4.Rotation
+		cframe2 = v4:Inverse() * rotation
+	end
+
+	return { desde = arg, hacia = arg2, c0 = arg3, c1 = arg4, srcs = arg5, a = cframe, b = cframe2 }
+end
+
+local function fn26(arg, arg2, arg3, arg4)
+	local v2 = fn23(arg)
+	local tbl18 = {}
+	local tbl19 = {}
+
+	for _, child in ipairs(arg2:GetChildren()) do
+		if child:IsA("BasePart") then
+			table.insert(tbl19, child)
+		end
+	end
+
+	if arg4 == "R6" then
+		for _, v3 in ipairs(tbl10) do
+			local v4 = arg2:FindFirstChild(v3.p0)
+			local v5 = arg2:FindFirstChild(v3.p1)
+
+			if v4 and v5 then
+				local tbl20 = {}
+
+				for _, v6 in ipairs(v3.r15) do
+					if v2[v6] then
+						table.insert(tbl20, v2[v6])
+					end
+				end
+
+				local v6 = fn25(v4, v5, v3.c0, v3.c1, tbl20)
+				local v7 = arg:FindFirstChild(v3.m0)
+				local v8 = arg:FindFirstChild(v3.m1)
+				v6.m0 = v7
+				v6.m1 = v8
+				table.insert(tbl18, v6)
+			end
+		end
+	else
+		local tbl20 = { [arg3] = true }
+		local tbl21 = { arg3 }
+
+		while #tbl21 > 0 do
+			local v3 = table.remove(tbl21, 1)
+
+			for _, child in ipairs(v3:GetChildren()) do
+				if child:IsA("Attachment") and child.Name:match("RigAttachment$") then
+					for _, v4 in ipairs(tbl19) do
+						if not tbl20[v4] then
+							local v5 = v4:FindFirstChild(child.Name)
+
+							if v5 and v5:IsA("Attachment") then
+								tbl20[v4] = true
+								local v6 = v2[child.Name:gsub("RigAttachment$", "")]
+								table.insert(tbl18, fn25(v3, v4, child.CFrame, v5.CFrame, v6 and { v6 } or {}))
+								table.insert(tbl21, v4)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	for _, child in ipairs(arg2:GetChildren()) do
+		if child:IsA("Accessory") then
+			local handle = child:FindFirstChild("Handle")
+			local attachment = handle and handle:FindFirstChildOfClass("Attachment")
+
+			if attachment then
+				for _, v3 in ipairs(tbl19) do
+					local v4 = v3:FindFirstChild(attachment.Name)
+					if v4 and v4:IsA("Attachment") then
+						table.insert(tbl18, fn25(v3, handle, v4.CFrame, attachment.CFrame, {}))
+						break
+					end
+				end
+			end
+		end
+	end
+
+	return tbl18
+end
+
+local function fn27()
+	local currentCamera = workspace.CurrentCamera
+	if not currentCamera then
+		return nil
+	end
+	local rysCapa = currentCamera:FindFirstChild("XitCapa")
+
+	if not rysCapa then
+		local folder = Instance.new("Folder")
+		folder.Name = "XitCapa"
+		folder.Parent = currentCamera
+		rysCapa = folder
+	end
+
+	return rysCapa
+end
+
+local function fn28(arg, arg2)
+	for _, descendant in ipairs(arg:GetDescendants()) do
+		if (descendant:IsA("BasePart") and descendant.Name ~= "HumanoidRootPart" or descendant:IsA("Decal")) and not descendant:FindFirstAncestorOfClass("Tool") then
+			if arg2 then
+				if descendant:GetAttribute("XitTransp") == nil then
+					descendant:SetAttribute("XitTransp", descendant.Transparency)
+				end
+
+				if descendant.Transparency < 1 then
+					descendant.Transparency = 1
+				end
+			else
+				local attribute = descendant:GetAttribute("XitTransp")
+
+				if attribute ~= nil then
+					descendant.Transparency = attribute
+					descendant:SetAttribute("XitTransp", nil)
+				end
+			end
+		end
+	end
+end
+
+local function fn29()
+	if tbl17.conn then
+		tbl17.conn:Disconnect()
+		tbl17.conn = nil
+	end
+
+	if tbl17.connFisica then
+		tbl17.connFisica:Disconnect()
+		tbl17.connFisica = nil
+	end
+
+	if tbl17.modelo then
+		tbl17.modelo:Destroy()
+		tbl17.modelo = nil
+	end
+
+	tbl17.cadena = {}
+
+	if tbl17.char then
+		fn28(tbl17.char, false)
+		tbl17.char = nil
+	end
+end
+
+local function fn30(arg, arg2)
+	local y = arg2.Position.Y
+
+	for _, child in ipairs(arg:GetChildren()) do
+		if child:IsA("BasePart") and child ~= arg2 then
+			y = math.min(y, child.Position.Y - child.Size.Y / 2)
+		end
+	end
+
+	return arg2.Position.Y - y
+end
+
+local function fn31(arg, arg2, arg3, arg4)
+	arg2.CFrame = arg.CFrame * arg4
+
+	for _, v2 in ipairs(arg3) do
+		if v2.m0 and v2.m1 then
+			local rotation = v2.m1.CFrame.Rotation
+			local n3 = v2.m0.CFrame.Rotation:Inverse() * rotation
+			local c1 = v2.c1
+			v2.hacia.CFrame = v2.desde.CFrame * v2.c0 * v2.c0.Rotation:Inverse() * n3 * v2.c1.Rotation * c1:Inverse()
+		else
+			local a = v2.a
+
+			for _, src in ipairs(v2.srcs) do
+				a *= src.Transform
+			end
+
+			v2.hacia.CFrame = v2.desde.CFrame * v2.c0 * a * v2.b * v2.c1:Inverse()
+		end
+	end
+end
+
+local function fn32(char, modelo)
+	local humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+	local humanoidRootPart2 = modelo:FindFirstChild("HumanoidRootPart")
+	local v2 = fn27()
+	if not (humanoidRootPart and humanoidRootPart2 and v2) then
+		modelo:Destroy()
+		return false
+	end
+	local humanoid = modelo:FindFirstChildOfClass("Humanoid")
+	char:FindFirstChildOfClass("Humanoid")
+	local cframe = CFrame.new(0, (humanoid and humanoid.HipHeight > 0 and humanoid.HipHeight + humanoidRootPart2.Size.Y / 2 or fn30(modelo, humanoidRootPart2)) - fn30(char, humanoidRootPart), 0)
+	local tbl18 = {}
+
+	local function fn33(arg)
+		arg.Anchored = arg == humanoidRootPart2
+		arg.CanCollide = false
+		arg.CanTouch = false
+		arg.CanQuery = false
+		arg.Massless = true
+		table.insert(tbl18, arg)
+	end
+
+	for _, descendant in ipairs(modelo:GetDescendants()) do
+		if descendant:IsA("BaseScript") then
+			descendant.Disabled = true
+		elseif descendant:IsA("BasePart") then
+			fn33(descendant)
+		end
+	end
+
+	if humanoid then
+		humanoid.PlatformStand = true
+		humanoid.AutoRotate = false
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+
+		pcall(function()
+			humanoid.EvaluateStateMachine = false
+		end)
+
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+
+		if animator then
+			animator:Destroy()
+		end
+	end
+
+	modelo.Name = "XitCapa_R15"
+	modelo.PrimaryPart = humanoidRootPart2
+	modelo:PivotTo(humanoidRootPart.CFrame * cframe)
+	modelo.Parent = v2
+	local now = os.clock()
+
+	while os.clock() - now < 1.5 and not modelo:FindFirstChildWhichIsA("AnimationConstraint", true) and not modelo:FindFirstChildWhichIsA("Motor6D", true) do
+		task.wait()
+	end
+
+	local v3 = fn23(char)
+	local cadena = {}
+
+	local function fn34(arg)
+		if arg:IsA("BallSocketConstraint") then
+			arg.Enabled = false
+		elseif arg:IsA("AnimationConstraint") or arg:IsA("Motor6D") then
+			pcall(function()
+				arg.IsKinematic = true
+			end)
+
+			local v4 = v3[arg.Name]
+
+			if v4 then
+				table.insert(cadena, { src = v4, tgt = arg })
+			end
+		end
+	end
+
+	for _, descendant in ipairs(modelo:GetDescendants()) do
+		fn34(descendant)
+	end
+
+	modelo.DescendantAdded:Connect(function(descendant)
+		if descendant:IsA("BasePart") then
+			fn33(descendant)
+		else
+			fn34(descendant)
+		end
+	end)
+
+	local v4 = tbl17
+	local v5 = tbl17
+	tbl17.modelo = modelo
+	v4.char = char
+	v5.cadena = cadena
+	fn28(char, true)
+
+	local function fn35()
+		humanoidRootPart2.CFrame = humanoidRootPart.CFrame * cframe
+
+		for _, v6 in ipairs(cadena) do
+			v6.tgt.Transform = v6.src.Transform
+		end
+	end
+
+	tbl17.connFisica = RunService.Stepped:Connect(function()
+		if tbl17.modelo ~= modelo then
+			return
+		end
+
+		for _, v6 in ipairs(tbl18) do
+			if v6.CanCollide then
+				v6.CanCollide = false
+			end
+
+			if v6.CanTouch then
+				v6.CanTouch = false
+			end
+		end
+
+		fn35()
+	end)
+
+	local n3 = 0
+
+	tbl17.conn = RunService.RenderStepped:Connect(function(deltaTime)
+		if tbl17.modelo ~= modelo then
+			return
+		end
+		fn35()
+		n3 += deltaTime
+
+		if n3 > 0.5 then
+			n3 = 0
+			fn28(char, true)
+		end
+	end)
+
+	return true
+end
+
+local function fn33(char, modelo)
+	fn29()
+	local humanoid = modelo:FindFirstChildOfClass("Humanoid")
+	humanoid = humanoid and humanoid.RigType == Enum.HumanoidRigType.R6 and "R6" or "R15"
+	if humanoid ~= "R6" then
+		return fn32(char, modelo)
+	end
+	local humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+	local humanoidRootPart2 = modelo:FindFirstChild("HumanoidRootPart")
+	local v2 = fn27()
+	if not (humanoidRootPart and humanoidRootPart2 and v2) then
+		modelo:Destroy()
+		return false
+	end
+	local humanoid2 = modelo:FindFirstChildOfClass("Humanoid")
+	char:FindFirstChildOfClass("Humanoid")
+	local flag = humanoid == "R6" and fn30(modelo, humanoidRootPart2)
+	local n3
+
+	if flag then
+		n3 = flag
+	else
+		n3 = (humanoid2 and humanoid2.HipHeight or 2) + humanoidRootPart2.Size.Y / 2
+	end
+
+	local cframe = CFrame.new(0, n3 - fn30(char, humanoidRootPart), 0)
+	local tbl18 = {}
+
+	for _, descendant in ipairs(modelo:GetDescendants()) do
+		if descendant:IsA("BaseScript") then
+			descendant.Disabled = true
+		elseif descendant:IsA("BasePart") then
+			descendant.Anchored = true
+			descendant.CanCollide = false
+			descendant.CanTouch = false
+			descendant.CanQuery = false
+			descendant.Massless = true
+			table.insert(tbl18, descendant)
+		elseif descendant:IsA("JointInstance") or descendant:IsA("Constraint") then
+			descendant:Destroy()
+		end
+	end
+
+	if humanoid2 then
+		humanoid2.PlatformStand = true
+		humanoid2.AutoRotate = false
+		humanoid2.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+
+		pcall(function()
+			humanoid2.EvaluateStateMachine = false
+		end)
+
+		local animator = humanoid2:FindFirstChildOfClass("Animator")
+
+		if animator then
+			animator:Destroy()
+		end
+	end
+
+	modelo.Name = "XitCapa_" .. humanoid
+	modelo.PrimaryPart = humanoidRootPart2
+	local v3 = fn26(char, modelo, humanoidRootPart2, humanoid)
+	fn31(humanoidRootPart, humanoidRootPart2, v3, cframe)
+	modelo.Parent = v2
+
+	for _, descendant in ipairs(modelo:GetDescendants()) do
+		if descendant:IsA("Constraint") or descendant:IsA("JointInstance") then
+			descendant:Destroy()
+		end
+	end
+
+	modelo.DescendantAdded:Connect(function(descendant)
+		if descendant:IsA("Constraint") or descendant:IsA("JointInstance") then
+			task.defer(function()
+				descendant:Destroy()
+			end)
+		elseif descendant:IsA("BasePart") then
+			descendant.Anchored = true
+			descendant.CanCollide = false
+			descendant.CanTouch = false
+			descendant.CanQuery = false
+			descendant.Massless = true
+			table.insert(tbl18, descendant)
+		end
+	end)
+
+	local v4 = tbl17
+	local v5 = tbl17
+	tbl17.modelo = modelo
+	v4.char = char
+	v5.cadena = v3
+	fn28(char, true)
+
+	tbl17.connFisica = RunService.Stepped:Connect(function()
+		for _, v6 in ipairs(tbl18) do
+			if v6.CanCollide then
+				v6.CanCollide = false
+			end
+			if v6.CanTouch then
+				v6.CanTouch = false
+			end
+		end
+	end)
+
+	local n4 = 0
+
+	tbl17.conn = RunService.RenderStepped:Connect(function(deltaTime)
+		if tbl17.modelo ~= modelo then
+			return
+		end
+		fn31(humanoidRootPart, humanoidRootPart2, v3, cframe)
+		n4 += deltaTime
+
+		if n4 > 0.5 then
+			n4 = 0
+			fn28(char, true)
+		end
+	end)
+
+	return true
+end
+
+local function fn34(arg, arg2, arg3, arg4)
+	if not arg then
+		return 0
+	end
+	local v2 = fn14(arg)
+	fn15(arg, v2)
+	local v3 = arg2 and fn33(arg, arg2, arg4)
+	local n3 = 0
+
+	if v3 then
+		n3 = 0 + #tbl17.cadena + 1
+	end
+
+	if arg3 then
+		n3 = n3 + fn17(arg, fn12(arg3)) + fn20(arg, fn13(arg3))
+	end
+
+	return n3
+end
+
+local function fn35(arg)
+	if not arg then
+		return
+	end
+	fn29()
+	local v2 = obj[arg]
+	if not v2 then
+		return
+	end
+	fn15(arg, v2)
+	fn18(arg, v2)
+end
+
+local v2 = nil
+local connection2 = nil
+
+local function fn41()
+	if v2 then
+		pcall(v2.Stop, v2, 0.2)
+		v2 = nil
+	end
+
+	if connection2 then
+		connection2:Disconnect()
+		connection2 = nil
+	end
+end
+
+local function fn42(arg)
+	local v3 = fn10(arg)
+	local v4 = ipairs
+	local tbl20 = v3 or {}
+
+	for _, v5 in v4(tbl20) do
+		if v5:IsA("Animation") then
+			return v5
+		end
+
+		for _, descendant in ipairs(v5:GetDescendants()) do
+			if descendant:IsA("Animation") then
+				return descendant
+			end
+		end
+	end
+
+	return nil
+end
+
+local function fn43(arg)
+	fn41()
+	local v3 = fn5()
+	local humanoid = v3 and v3:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return false
+	end
+	local v4 = fn19(v3)
+
+	if v4 then
+		local ok, result = pcall(v4.GetEmotes, v4)
+
+		if ok and result[arg.nombre] then
+			local ok2, result2 = pcall(humanoid.PlayEmote, humanoid, arg.nombre)
+			if ok2 and result2 then
+				return true
+			end
+		end
+	end
+
+	local v5 = fn42(arg.id)
+	if not v5 then
+		return false
+	end
+	local ok, result = pcall(animator.LoadAnimation, animator, v5)
+	if not (ok and result) then
+		return false
+	end
+	result.Priority = Enum.AnimationPriority.Action
+	result.Looped = true
+	result:Play(0.2)
+	v2 = result
+
+	connection2 = RunService.Heartbeat:Connect(function()
+		if not (humanoid.Parent and v2 == result) then
+			fn41()
+			return
+		end
+		local flag = humanoid.MoveDirection.Magnitude > 0
+
+		if not flag then
+			local jumping = Enum.HumanoidStateType.Jumping
+			flag = humanoid:GetState() == jumping
+		end
+
+		if not flag then
+			local freefall = Enum.HumanoidStateType.Freefall
+			flag = humanoid:GetState() == freefall
+		end
+
+		if flag then
+			fn41()
+		end
+	end)
+
+	return true
+end
+
+local v3 = nil
+
+if gethui then
+	local ok, result = pcall(gethui)
+	v3 = ok and result or nil
+end
+
+v3 = v3 or CoreGui
+local xitAparienciaTest = v3:FindFirstChild("XitadosSkin") or localPlayer:FindFirstChild("PlayerGui") and localPlayer.PlayerGui:FindFirstChild("XitadosSkin")
+
+if xitAparienciaTest then
+	xitAparienciaTest:Destroy()
+end
+
+if getgenv().XitadosSkin then
+	pcall(getgenv().XitadosSkin.quitar)
+end
+
+fn()
+task.spawn(fn21)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "XitadosSkin"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.DisplayOrder = 2147483647
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+if not pcall(function()
+	screenGui.Parent = v3
+end) then
+	screenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+end
+
+local Frame = fn3("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(420, 274),
+	BackgroundColor3 = tbl.Background,
+	BorderSizePixel = 0,
+	Active = true,
+}, screenGui, 16)
+
+fn3("UIStroke", { Color = tbl.Border, Thickness = 1, Transparency = 0.2 }, Frame)
+local uiGradient = Instance.new("UIGradient")
+uiGradient.Color = ColorSequence.new(tbl.BackgroundAlt, tbl.Background)
+uiGradient.Rotation = 90
+uiGradient.Parent = Frame
+
+fn3("TextButton", {
+	Text = "",
+	Size = UDim2.new(1, 0, 1, 0),
+	BackgroundTransparency = 1,
+	AutoButtonColor = false,
+	Active = true,
+	Selectable = false,
+	ZIndex = 0,
+}, Frame)
+
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = Frame
+local flag = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+local function fn44()
+	local currentCamera = workspace.CurrentCamera
+	currentCamera = currentCamera and currentCamera.ViewportSize or Vector2.new(1280, 720)
+	local n3 = 0.92
+	local n4 = 0.94
+
+	if flag then
+		n3 = 0.78
+		n4 = 0.9
+	end
+
+	uiScale.Scale = math.clamp(math.min(currentCamera.X * n4 / n, currentCamera.Y * n3 / n2), 0.4, 1)
+end
+
+fn44()
+local Frame2 = fn3("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 52) }, Frame)
+
+fn3("TextLabel", {
+	BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(18, 15),
+	Size = UDim2.fromOffset(130, 22),
+	Font = Enum.Font.GothamBold,
+	Text = "Xitados",
+	TextSize = 17,
+	TextColor3 = tbl.Text,
+	TextXAlignment = Enum.TextXAlignment.Left,
+}, Frame)
+
+local TextButton = fn3("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -44, 0, 13),
+	Size = UDim2.fromOffset(26, 26),
+	BackgroundColor3 = tbl.Surface,
+	BorderSizePixel = 0,
+	AutoButtonColor = true,
+	Font = Enum.Font.GothamBold,
+	Text = "",
+	TextSize = 14,
+	TextColor3 = tbl.Icon,
+}, Frame, 8)
+
+createImageLabel(TextButton, "minus", 16, tbl.Icon)
+
+local TextButton2 = fn3("TextButton", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -14, 0, 13),
+	Size = UDim2.fromOffset(26, 26),
+	BackgroundColor3 = tbl.Surface,
+	BorderSizePixel = 0,
+	AutoButtonColor = true,
+	Font = Enum.Font.GothamBold,
+	Text = "",
+	TextSize = 12,
+	TextColor3 = tbl.Icon,
+}, Frame, 8)
+
+createImageLabel(TextButton2, "x", 16, tbl.Icon)
+
+fn3("Frame", {
+	Position = UDim2.fromOffset(0, 52),
+	Size = UDim2.new(1, 0, 0, 1),
+	BackgroundColor3 = tbl.Line,
+	BorderSizePixel = 0,
+}, Frame)
+
+local n3 = n - 28 - 4
+
+local Frame3 = fn3("Frame", {
+	Position = UDim2.fromOffset(18, 64),
+	Size = UDim2.fromOffset(n3 - 44, 36),
+	BackgroundColor3 = tbl.Surface,
+	BorderSizePixel = 0,
+}, Frame, 8)
+
+local TextBox = fn3("TextBox", {
+	BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(10, 0),
+	Size = UDim2.new(1, -20, 1, 0),
+	Font = Enum.Font.Gotham,
+	PlaceholderText = "pon su nombre aqui",
+	PlaceholderColor3 = tbl.Faint,
+	Text = "",
+	TextSize = 13,
+	TextColor3 = tbl.Text,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ClearTextOnFocus = false,
+}, Frame3)
+
+local TextButton3 = fn3("TextButton", {
+	Position = UDim2.fromOffset(18 + n3 - 38, 64),
+	Size = UDim2.fromOffset(38, 36),
+	BackgroundColor3 = tbl.Surface,
+	BorderSizePixel = 0,
+	AutoButtonColor = true,
+	Font = Enum.Font.GothamBold,
+	Text = "",
+	TextSize = 14,
+	TextColor3 = tbl.Icon,
+}, Frame, 8)
+
+createImageLabel(TextButton3, "search", 17, tbl.Icon)
+local n4 = n3 - 166
+
+local Frame4 = fn3("Frame", {
+	Position = UDim2.fromOffset(18, 108),
+	Size = UDim2.fromOffset(150, 150),
+	BackgroundColor3 = tbl.Surface,
+	BorderSizePixel = 0,
+}, Frame, 12)
+
+local ImageLabel = fn3("ImageLabel", {
+	BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(6, 6),
+	Size = UDim2.new(1, -12, 1, -12),
+	Image = "",
+	ScaleType = Enum.ScaleType.Fit,
+}, Frame4)
+
+local TextLabel2 = fn3("TextLabel", {
+	Position = UDim2.fromOffset(184, 110),
+	Size = UDim2.fromOffset(n4, 22),
+	BackgroundTransparency = 1,
+	Font = Enum.Font.GothamBold,
+	Text = "elegi un jugador",
+	TextSize = 15,
+	TextColor3 = tbl.Text,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+}, Frame)
+
+local TextLabel3 = fn3("TextLabel", {
+	Position = UDim2.fromOffset(184, 132),
+	Size = UDim2.fromOffset(n4, 16),
+	BackgroundTransparency = 1,
+	Font = Enum.Font.Gotham,
+	Text = "",
+	TextSize = 11,
+	TextColor3 = tbl.Faint,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+}, Frame)
+
+local obj3 = setmetatable({}, { __newindex = function(arg, arg2, arg3)
+	if arg2 == "Text" and tbl3.userId then
+		TextLabel3.Text = (tbl3.usuario and "@" .. tbl3.usuario or "") .. ((arg3 == "sin aplicar" or arg3:find("^aplicado")) and "" or "  ·  " .. arg3)
+	end
+end })
+
+local function fn45(arg, arg2, arg3, arg4, arg5, arg7, arg8)
+	local TextButton5 = fn3("TextButton", {
+		Position = UDim2.fromOffset(arg, arg2),
+		Size = UDim2.fromOffset(arg3, arg4),
+		BackgroundColor3 = arg7,
+		BorderSizePixel = 0,
+		AutoButtonColor = true,
+		Font = Enum.Font.GothamBold,
+		Text = arg5,
+		TextSize = 12,
+		TextColor3 = arg8,
+	}, Frame, 8)
+
+	return TextButton5
+end
+
+local aplicar = fn45(184, 158, 100, 32, "Aplicar", tbl.OnFill, tbl.On)
+local quitar = fn45(292, 158, n4 - 108, 32, "Quitar", tbl.Surface, tbl.Icon)
+local r15 = fn45(184, 206, 100, 32, "R15", tbl.Surface, tbl.Faint)
+local r6 = fn45(292, 206, n4 - 108, 32, "R6", tbl.Surface, tbl.Faint)
+
+local function fn46()
+	for k, v7 in pairs({ [r15] = tbl3.rig == "R15", [r6] = tbl3.rig == "R6" }) do
+		k.BackgroundColor3 = v7 and tbl.OnFill or tbl.Surface
+		v7 = v7 and tbl.On or tbl.Faint
+		k.TextColor3 = v7
+	end
+end
+
+local flag2 = false
+
+local TextButton5 = fn3("TextButton", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Size = UDim2.fromOffset(46, 46),
+	BackgroundColor3 = tbl.Background,
+	BorderSizePixel = 0,
+	AutoButtonColor = true,
+	Font = Enum.Font.GothamBold,
+	Text = "X",
+	TextSize = 18,
+	TextColor3 = tbl.Text,
+	Visible = false,
+}, screenGui, 23)
+
+fn3("UIStroke", { Color = tbl.Border, Thickness = 1.5, Transparency = 0.1 }, TextButton5)
+
+local function fn47(visible)
+	flag2 = visible
+
+	if visible then
+		local absolutePosition = Frame.AbsolutePosition
+		TextButton5.Position = UDim2.fromOffset(absolutePosition.X + 26, absolutePosition.Y + 26)
+	end
+
+	Frame.Visible = not visible
+	TextButton5.Visible = visible
+end
+
+TextButton.Activated:Connect(function()
+	fn47(true)
+end)
+
+local tbl20 = nil
+
+TextButton5.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		tbl20 = { desde = input.Position, origen = TextButton5.Position, movio = false }
+	end
+end)
+
+TextButton5.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		local v7 = tbl20
+		tbl20 = nil
+
+		if v7 and not v7.movio then
+			fn47(false)
+		end
+	end
+end)
+
+local connection3 = UserInputService.InputChanged:Connect(function(input)
+	local v7 = tbl20
+	if not v7 then
+		return
+	end
+
+	if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then
+		return
+	end
+	local n5 = input.Position - v7.desde
+
+	if n5.Magnitude > 6 then
+		v7.movio = true
+	end
+
+	if v7.movio then
+		TextButton5.Position = UDim2.new(v7.origen.X.Scale, v7.origen.X.Offset + n5.X, v7.origen.Y.Scale, v7.origen.Y.Offset + n5.Y)
+	end
+end)
+
+local Frame5 = fn3("Frame", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundColor3 = tbl.Background,
+	BackgroundTransparency = 0.3,
+	BorderSizePixel = 0,
+	Visible = false,
+	ZIndex = 20,
+	Active = true,
+}, Frame, 16)
+
+fn3("TextButton", {
+	Text = "",
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	AutoButtonColor = false,
+	ZIndex = 20,
+}, Frame5)
+
+local Frame6 = fn3("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(300, 132),
+	BackgroundColor3 = tbl.Surface,
+	BorderSizePixel = 0,
+	ZIndex = 21,
+}, Frame5, 12)
+
+fn3("UIStroke", { Color = tbl.Line, Thickness = 1 }, Frame6)
+
+fn3("TextLabel", {
+	BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(16, 16),
+	Size = UDim2.new(1, -32, 0, 22),
+	Font = Enum.Font.GothamBold,
+	Text = "¿Cerrar Apariencia?",
+	TextSize = 15,
+	TextColor3 = tbl.Text,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 22,
+}, Frame6)
+
+fn3("TextLabel", {
+	BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(16, 40),
+	Size = UDim2.new(1, -32, 0, 32),
+	Font = Enum.Font.Gotham,
+	Text = "se quita la skin y se apaga todo. si solo queres esconderla usa el –",
+	TextSize = 11,
+	TextColor3 = tbl.Faint,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextWrapped = true,
+	ZIndex = 22,
+}, Frame6)
+
+local TextButton6 = fn3("TextButton", {
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(1, -16, 1, -14),
+	Size = UDim2.fromOffset(96, 30),
+	BackgroundColor3 = tbl.DangerFill,
+	BorderSizePixel = 0,
+	AutoButtonColor = true,
+	Font = Enum.Font.GothamBold,
+	Text = "Cerrar",
+	TextSize = 12,
+	TextColor3 = tbl.Danger,
+	ZIndex = 22,
+}, Frame6, 8)
+
+fn3("TextButton", {
+	AnchorPoint = Vector2.new(1, 1),
+	Position = UDim2.new(1, -120, 1, -14),
+	Size = UDim2.fromOffset(96, 30),
+	BackgroundColor3 = tbl.SurfaceUp,
+	BorderSizePixel = 0,
+	AutoButtonColor = true,
+	Font = Enum.Font.GothamBold,
+	Text = "Cancelar",
+	TextSize = 12,
+	TextColor3 = tbl.Icon,
+	ZIndex = 22,
+}, Frame6, 8).Activated:Connect(function()
+	Frame5.Visible = false
+end)
+
+local function fn48()
+	if not tbl3.userId then
+		return
+	end
+	local userId = tbl3.userId
+
+	task.spawn(function()
+		local v7 = fn9(userId)
+		if tbl3.userId ~= userId or not v7 then
+			return
+		end
+		task.spawn(fn11, v7)
+	end)
+end
+
+local function fn51()
+	if not tbl3.userId then
+		TextLabel2.Text = "elegi un jugador"
+		TextLabel3.Text = ""
+		ImageLabel.Image = ""
+		return
+	end
+
+	TextLabel2.Text = tbl3.nombre or "..."
+	TextLabel3.Text = tbl3.usuario and "@" .. tbl3.usuario or ""
+	ImageLabel.Image = ("rbxthumb://type=Avatar&id=%d&w=352&h=352"):format(tbl3.userId)
+	fn48()
+end
+
+local function fn53(arg)
+	local v7, v8 = fn7(arg)
+	if not v8 then
+		return false
+	end
+	local flag3 = false
+
+	if tbl3.userId == arg and (tbl3.nombre ~= v7 or tbl3.usuario ~= v8) then
+		local v9 = tbl3
+		tbl3.nombre = v7
+		v9.usuario = v8
+		flag3 = true
+	end
+
+	return flag3
+end
+
+local function fn54(arg)
+	local userId = tonumber(arg)
+	local v7 = tbl5[userId]
+	tbl3.userId = userId
+	tbl3.nombre = v7 and v7.nombre or nil
+	tbl3.usuario = v7 and v7.usuario or nil
+
+	fn51()
+	fn2()
+
+	task.spawn(function()
+		if fn53(userId) and tbl3.userId == userId then
+			fn51()
+			fn2()
+		end
+	end)
+
+	task.spawn(function()
+		local v8 = fn8(userId)
+
+		if v8 and tbl3.userId == userId and tbl3.rig ~= v8 then
+			tbl3.rig = v8
+			fn2()
+			fn46()
+		end
+	end)
+end
+
+local flag3 = false
+
+local function fn56(arg, arg2)
+	local v7 = fn9(arg)
+
+	if v7 then
+		fn11(v7)
+	end
+
+	return v7, fn6(arg, v7, arg2)
+end
+
+local function fn57(arg, arg2)
+	local rig = tbl3.rig
+	local v7, v8 = fn56(arg2, rig)
+	if not (v7 or v8) then
+		return nil
+	end
+
+	if fn5() ~= arg then
+		if v8 then
+			v8:Destroy()
+		end
+
+		return nil
+	end
+
+	fn41()
+	return fn34(arg, v8, v7, rig)
+end
+
+local function fn58()
+	if flag3 or not tbl3.userId then
+		return
+	end
+	flag3 = true
+	obj3.Text = "bajando avatar..."
+
+	task.spawn(function()
+		local userId = tbl3.userId
+		local v7 = fn5()
+
+		if not v7 then
+			obj3.Text = "esperando personaje (invisible?)"
+			flag3 = false
+			return
+		end
+
+		local v8 = fn57(v7, userId)
+
+		if not v8 then
+			obj3.Text = "no pude traer ese avatar"
+			flag3 = false
+			return
+		end
+
+		tbl3.aplicado = userId
+		fn2()
+		obj3.Text = ("aplicado: %s · %s · %d piezas · se reaplica al revivir"):format(tbl3.nombre or tostring(userId), tbl3.rig, v8)
+		flag3 = false
+	end)
+end
+
+local function fn59()
+	tbl3.aplicado = nil
+	fn2()
+	fn41()
+	fn29()
+	local v7 = fn5()
+
+	if v7 then
+		fn35(v7)
+		fn22(v7)
+	end
+
+	obj3.Text = "sin aplicar"
+end
+
+aplicar.Activated:Connect(fn58)
+quitar.Activated:Connect(fn59)
+
+local function fn60(rig)
+	if tbl3.rig == rig then
+		return
+	end
+	tbl3.rig = rig
+	fn2()
+	fn46()
+
+	if tbl3.aplicado and fn5() then
+		tbl3.userId = tbl3.userId or tbl3.aplicado
+		fn58()
+	end
+end
+
+r15.Activated:Connect(function()
+	fn60("R15")
+end)
+
+r6.Activated:Connect(function()
+	fn60("R6")
+end)
+
+local function fn61()
+	local str2 = TextBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+	if str2 == "" then
+		return
+	end
+	local num = tonumber(str2)
+	if num then
+		fn54(num)
+		return
+	end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Name:lower() == str2:lower() or player.DisplayName:lower() == str2:lower() then
+			fn54(player.UserId)
+			return
+		end
+	end
+
+	obj3.Text = "buscando " .. str2 .. "..."
+
+	task.spawn(function()
+		local ok, result = pcall(Players.GetUserIdFromNameAsync, Players, str2)
+
+		if ok and result then
+			fn54(result)
+		else
+			obj3.Text = "no existe ese usuario"
+		end
+	end)
+end
+
+TextButton3.Activated:Connect(fn61)
+
+TextBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		fn61()
+	end
+end)
+
+local tbl21 = {}
+
+table.insert(tbl21, localPlayer.CharacterAdded:Connect(function(character)
+	fn41()
+	fn29()
+	if not tbl3.aplicado then
+		return
+	end
+
+	task.spawn(function()
+		character:WaitForChild("Humanoid", 10)
+		character:WaitForChild("Animate", 10)
+		task.wait(0.6)
+
+		if tbl3.aplicado and fn5() == character then
+			fn57(character, tbl3.aplicado)
+		end
+	end)
+end))
+
+local flag4 = false
+local v7 = nil
+local v8 = nil
+
+Frame2.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		local position = input.Position
+		local position2 = Frame.Position
+		flag4 = true
+		v7 = position
+		v8 = position2
+	end
+end)
+
+Frame2.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		flag4 = false
+	end
+end)
+
+table.insert(tbl21, UserInputService.InputChanged:Connect(function(input)
+	if not (flag4 and v7 and v8) then
+		return
+	end
+
+	if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then
+		return
+	end
+	local n5 = input.Position - v7
+	Frame.Position = UDim2.new(v8.X.Scale, v8.X.Offset + n5.X, v8.Y.Scale, v8.Y.Offset + n5.Y)
+end))
+
+local currentCamera = workspace.CurrentCamera
+
+if currentCamera then
+	table.insert(tbl21, currentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fn44))
+end
+
+TextButton2.Activated:Connect(function()
+	if flag2 then
+		fn47(false)
+	end
+
+	Frame5.Visible = button and true or false
+	Frame5.Visible = true
+end)
+
+TextButton6.Activated:Connect(function()
+	Frame5.Visible = false
+	connection3:Disconnect()
+	fn59()
+
+	for _, v9 in ipairs(tbl21) do
+		pcall(function()
+			v9:Disconnect()
+		end)
+	end
+
+	getgenv().XitadosSkin = nil
+	screenGui:Destroy()
+end)
+
+getgenv().XitadosSkin = { aplicar = fn58, quitar = fn59, elegir = fn54, emote = fn43, pararEmote = fn41 }
+fn46()
+fn51()
+
+task.spawn(function()
+	local flag5 = false
+
+	if tbl3.userId then
+		flag5 = fn53(tbl3.userId) or flag5
+	end
+
+	if flag5 then
+		fn2()
+		fn51()
+	end
+end)
