@@ -19,7 +19,6 @@ local tbl = {
 	BackgroundAlt = Color3.fromRGB(48, 11, 11),
 	Surface = Color3.fromRGB(52, 14, 14),
 	SurfaceUp = Color3.fromRGB(68, 18, 18),
-	Soft = Color3.fromRGB(255, 99, 99),
 	Line = Color3.fromRGB(112, 40, 40),
 	Border = Color3.fromRGB(236, 96, 96),
 	Text = Color3.fromRGB(255, 236, 236),
@@ -27,8 +26,6 @@ local tbl = {
 	Faint = Color3.fromRGB(236, 176, 176),
 	On = Color3.fromRGB(255, 255, 255),
 	OnFill = Color3.fromRGB(123, 40, 40),
-	Danger = Color3.fromRGB(255, 255, 255),
-	DangerFill = Color3.fromRGB(141, 58, 58),
 }
 
 local COLORES_NEUTROS = {
@@ -495,11 +492,11 @@ local function setKillAllEnabled(value)
 end
 
 local v3 = gethui and gethui() or CoreGui
-local oldMenu = v3:FindFirstChild("XitadosKillAll") or localPlayer.PlayerGui:FindFirstChild("XitadosKillAll")
+local oldMenu = v3:FindFirstChild("XitadosKillAllMenu") or localPlayer.PlayerGui:FindFirstChild("XitadosKillAllMenu")
 if oldMenu then oldMenu:Destroy() end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "XitadosKillAll"
+screenGui.Name = "XitadosKillAllMenu"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.DisplayOrder = 2147483647
@@ -635,6 +632,17 @@ floatStroke.Thickness = 1.5
 floatStroke.Transparency = 0.1
 floatStroke.Parent = minFloatBtn
 
+minBtn.Activated:Connect(function()
+	Frame.Visible = false
+	minFloatBtn.Position = UDim2.fromOffset(Frame.AbsolutePosition.X + 23, Frame.AbsolutePosition.Y + 23)
+	minFloatBtn.Visible = true
+end)
+
+closeBtn.Activated:Connect(function()
+	setKillAllEnabled(false)
+	screenGui:Destroy()
+end)
+
 toggleBtn.Activated:Connect(function()
     local newState = not KillAllEnabled
     setKillAllEnabled(newState)
@@ -649,40 +657,55 @@ toggleBtn.Activated:Connect(function()
     end
 end)
 
-minBtn.Activated:Connect(function()
-    Frame.Visible = false
-    minFloatBtn.Position = UDim2.fromOffset(Frame.AbsolutePosition.X + 26, Frame.AbsolutePosition.Y + 26)
-    minFloatBtn.Visible = true
-end)
-
-minFloatBtn.Activated:Connect(function()
-    minFloatBtn.Visible = false
-    Frame.Visible = true
-end)
-
-closeBtn.Activated:Connect(function()
-    setKillAllEnabled(false)
-    screenGui:Destroy()
-end)
-
 local dragging, dragStart, startPos
 topBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+	end
 end)
 
 topBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+local floatDragging, floatDragStart, floatStartPos, floatMoved = false, nil, nil, false
+
+minFloatBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		floatDragging = true
+		floatMoved = false
+		floatDragStart = input.Position
+		floatStartPos = minFloatBtn.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if floatDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - floatDragStart
+		if delta.Magnitude > 5 then
+			floatMoved = true
+			minFloatBtn.Position = UDim2.new(floatStartPos.X.Scale, floatStartPos.X.Offset + delta.X, floatStartPos.Y.Scale, floatStartPos.Y.Offset + delta.Y)
+		end
+	end
+end)
+
+minFloatBtn.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		floatDragging = false
+		if not floatMoved then
+			minFloatBtn.Visible = false
+			Frame.Visible = true
+		end
+	end
 end)
