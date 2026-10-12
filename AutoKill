@@ -15,17 +15,17 @@ local hitboxSize = 6
 local hitboxColor = Color3.fromRGB(255, 0, 0)
 
 local tbl = {
-	Background = Color3.fromRGB(30, 7, 7),
-	BackgroundAlt = Color3.fromRGB(48, 11, 11),
-	Surface = Color3.fromRGB(52, 14, 14),
-	SurfaceUp = Color3.fromRGB(68, 18, 18),
-	Line = Color3.fromRGB(112, 40, 40),
-	Border = Color3.fromRGB(236, 96, 96),
-	Text = Color3.fromRGB(255, 236, 236),
-	Icon = Color3.fromRGB(244, 180, 180),
-	Faint = Color3.fromRGB(236, 176, 176),
-	On = Color3.fromRGB(255, 255, 255),
-	OnFill = Color3.fromRGB(123, 40, 40),
+	Background = Color3.fromRGB(15, 15, 15),       
+	BackgroundAlt = Color3.fromRGB(25, 25, 25),    
+	Surface = Color3.fromRGB(35, 35, 35),         
+	SurfaceUp = Color3.fromRGB(45, 45, 45),     
+	Line = Color3.fromRGB(70, 70, 70),            
+	Border = Color3.fromRGB(120, 120, 120),       
+	Text = Color3.fromRGB(230, 230, 230),         
+	Icon = Color3.fromRGB(200, 200, 200),         
+	Faint = Color3.fromRGB(180, 180, 180),        
+	On = Color3.fromRGB(255, 255, 255),          
+	OnFill = Color3.fromRGB(60, 60, 60),          
 }
 
 local COLORES_NEUTROS = {
@@ -889,4 +889,4 @@ minFloatBtn.InputEnded:Connect(function(input)
 			Frame.Visible = true
 		end
 	end
-end) 
+end)
