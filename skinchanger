@@ -4,8 +4,8 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local UserService = game:GetService("UserService")
-local str = "xitados/duelos-apariencia.json"[cite: 3]
-local localPlayer = Players.LocalPlayer[cite: 3]
+local str = "xitados/duelos-apariencia.json"
+local localPlayer = Players.LocalPlayer
 
 local tbl = {
 	Background = Color3.fromRGB(15, 15, 15),
