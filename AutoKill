@@ -7,6 +7,37 @@ local workspace = game:GetService("Workspace")
 local localPlayer = Players.LocalPlayer
 while not localPlayer do task.wait() localPlayer = Players.LocalPlayer end
 
+local PRIMERARG1 = "959d5e90-231d-4f6e-8861-050e2c22b938"
+local elremotelistope = nil
+
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+local hookenable = true
+
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
+    if not hookenable then
+        return oldNamecall(self, ...)
+    end
+
+    local method = getnamecallmethod()
+    if method == "FireServer" then
+        local args = {...}
+        if args[1] == PRIMERARG1 then
+            elremotelistope = self
+
+            hookenable = false
+            mt.__namecall = oldNamecall
+            setreadonly(mt, true)
+        end
+    end
+
+    return oldNamecall(self, ...)
+end)
+
+setreadonly(mt, true)
+
 local teamCheckEnabled = true
 local KillAllEnabled = false
 local hitboxEnabled = false
@@ -370,11 +401,11 @@ end)
 
 local KILLALL_MOVE_SPEED = 39.9
 local KILLALL_APPROACH_DISTANCE = 1.5
-local KILLALL_SWING_INTERVAL = 0.1
+local KILLALL_SWING_INTERVAL = 0.3
 local KILLALL_SAFE_GROUND_THRESHOLD = 3
 local KILLALL_STICK_MAX_TIME = 2.5
 local KILLALL_BELOW_HEIGHT = 12
-local KILLALL_TRIGGER_RADIUS = 9.0
+local KILLALL_TRIGGER_RADIUS = 20
 
 local KillAll = {}
 KillAll.__index = KillAll
@@ -391,6 +422,7 @@ function KillAll.new()
         lockedTargetPlayer = nil,
         lastStickTarget = nil,
         lastStickTargetHum = nil,
+        tappedScreen = false,
     }, KillAll)
 end
 
@@ -467,6 +499,7 @@ function KillAll:ResetState()
     self.swingAccumulator = 0
     self.lockedTargetPlayer = nil
     self.currentTarget = nil
+    self.tappedScreen = false
     self:RestoreCollisions()
     local hum = self:GetHumanoid(localPlayer)
     if hum and hum.PlatformStand then pcall(function() hum.PlatformStand = false end) end
@@ -486,7 +519,7 @@ end
 function KillAll:IsKnife(tool)
     if not (tool and tool:IsA("Tool")) then return false end
     if tool:FindFirstChild("fire") or tool:FindFirstChild("showBeam") then return false end
-    return tool:FindFirstChild("Slash") ~= nil or tool:FindFirstChild("SlashStart") ~= nil
+    return tool:FindFirstChild("Slash") ~= nil or tool:FindFirstChild("SlashStart") ~= nil or tool:FindFirstChild("Handle") ~= nil
 end
 
 function KillAll:FindKnife()
@@ -505,19 +538,46 @@ function KillAll:FindKnife()
     return nil, false
 end
 
-function KillAll:SwingKnife(dt)
+function KillAll:EnsureKnifeEquipped()
+    local tool, equipped = self:FindKnife()
+    if not tool then return nil end
+    if not equipped then
+        local hum = self:GetHumanoid(localPlayer)
+        if hum then
+            pcall(function() hum:EquipTool(tool) end)
+        end
+    end
+    return tool
+end
+
+function KillAll:SwingKnife(dt, targetRoot)
     self.swingAccumulator = self.swingAccumulator + dt
     if self.swingAccumulator < KILLALL_SWING_INTERVAL then return end
     self.swingAccumulator = 0
-    local tool, equipped = self:FindKnife()
+
+    local tool = self:EnsureKnifeEquipped()
     if not tool then return end
-    if not equipped then
-        local hum = self:GetHumanoid(localPlayer)
-        if not hum then return end
-        pcall(function() hum:EquipTool(tool) end)
-        if tool.Parent ~= localPlayer.Character then return end
+
+    local char = localPlayer.Character
+    local handle = tool:FindFirstChild("Handle")
+    if handle and targetRoot then
+        if firetouchinterest then
+            pcall(function()
+                firetouchinterest(handle, targetRoot, 0)
+                firetouchinterest(handle, targetRoot, 1)
+            end)
+        end
     end
-    pcall(function() tool:Activate() end)
+
+    if elremotelistope then
+        pcall(function()
+            elremotelistope:FireServer(PRIMERARG1)
+        end)
+    else
+        pcall(function()
+            tool:Activate()
+        end)
+    end
 end
 
 function KillAll:ForceBelowground(myRoot, targetRoot)
@@ -532,6 +592,8 @@ end
 
 function KillAll:ApproachTarget(myRoot, targetRoot, dt)
     dt = dt or 0
+    self:EnsureKnifeEquipped()
+
     local myPos = myRoot.Position
     local targetPos = targetRoot.Position
     local deltaXZ = Vector3.new(targetPos.X - myPos.X, 0, targetPos.Z - myPos.Z)
@@ -568,6 +630,7 @@ function KillAll:ApproachTarget(myRoot, targetRoot, dt)
 end
 
 function KillAll:StickToTarget(myRoot, targetRoot)
+    self:EnsureKnifeEquipped()
     local enemyChar = targetRoot.Parent
     local ghostHitbox = enemyChar and enemyChar:FindFirstChild("GhostHitbox")
     local targetPos = ghostHitbox and ghostHitbox.Position or targetRoot.Position
@@ -594,6 +657,7 @@ function KillAll:Update(dt)
             self.lastStickTarget = nil
             self.sticking = false
             self.lockedTargetPlayer = nil
+            self.tappedScreen = false
             return
         end
     end
@@ -612,9 +676,10 @@ function KillAll:Update(dt)
     if self.sticking then
         if target ~= self.lastStickTarget or (os.clock() - self.stickingStartTime) > KILLALL_STICK_MAX_TIME then
             self.sticking = false
+            self.tappedScreen = false
         else
             self:StickToTarget(myRoot, target)
-            self:SwingKnife(dt or 0)
+            self:SwingKnife(dt or 0, target)
             return
         end
     end
